@@ -1,0 +1,310 @@
+{
+  "territories": [
+    {
+      "id": 0,
+      "name": "Britannia",
+      "type": "ground",
+      "coords": {"x": 100, "y": 50}
+    },
+    {
+      "id": 1,
+      "name": "Belgica",
+      "type": "ground",
+      "coords": {"x": 200, "y": 100}
+    },
+    {
+      "id": 2,
+      "name": "Germania Inferior",
+      "type": "ground",
+      "coords": {"x": 220, "y":  35}
+    },
+    {
+      "id": 3,
+      "name": "Raetia",
+      "type": "ground",
+      "coords": {"x": 300, "y":  90}
+    },
+    {
+      "id": 4,
+      "name": "Lugdunense",
+      "type": "ground",
+      "coords": {"x": 160, "y":  145}
+    },
+    {
+      "id": 5,
+      "name": "Noricum",
+      "type": "ground",
+      "coords": {"x": 380, "y":  85}
+    },
+    {
+      "id": 6,
+      "name": "Cisalpina",
+      "type": "ground",
+      "coords": {"x": 310, "y":  160}
+    },
+    {
+      "id": 7,
+      "name": "Aquitania",
+      "type": "ground",
+      "coords": {"x": 160, "y":  200}
+    },
+    {
+      "id": 8,
+      "name": "Narbonensis",
+      "type": "ground",
+      "coords": {"x": 230, "y":  210}
+    },
+    {
+      "id": 9,
+      "name": "Corsica",
+      "type": "ground",
+      "coords": {"x": 305, "y":  250}
+    },
+    {
+      "id": 10,
+      "name": "Sardinia",
+      "type": "ground",
+      "coords": {"x": 315, "y":  290}
+    },
+    {
+      "id": 11,
+      "name": "Terraconensis",
+      "type": "ground",
+      "coords": {"x": 150, "y":  320}
+    },
+    {
+      "id": 12,
+      "name": "Galicia",
+      "type": "ground",
+      "coords": {"x": 90, "y":  280}
+    },
+    {
+      "id": 13,
+      "name": "Lusitania",
+      "type": "ground",
+      "coords": {"x": 45, "y":  320}
+    },
+    {
+      "id": 14,
+      "name": "Baetica",
+      "type": "ground",
+      "coords": {"x": 100, "y":  380}
+    },
+    {
+      "id": 15,
+      "name": "Italia",
+      "type": "ground",
+      "coords": {"x": 370, "y":  230}
+    },
+    {
+      "id": 16,
+      "name": "Illiria",
+      "type": "ground",
+      "coords": {"x": 410, "y":  160}
+    },
+    {
+      "id": 17,
+      "name": "Dalmazia",
+      "type": "ground",
+      "coords": {"x": 440, "y":  130}
+    },
+    {
+      "id": 18,
+      "name": "Pannonia",
+      "type": "ground",
+      "coords": {"x": 460, "y":  90}
+    },
+    {
+      "id": 19,
+      "name": "Dacia",
+      "type": "ground",
+      "coords": {"x": 490, "y":  50}
+    },
+    {
+      "id": 20,
+      "name": "Moesia",
+      "type": "ground",
+      "coords": {"x": 540, "y":  65}
+    },
+    {
+      "id": 21,
+      "name": "Thracia",
+      "type": "ground",
+      "coords": {"x": 550, "y":  130}
+    },
+    {
+      "id": 22,
+      "name": "Macedonia",
+      "type": "ground",
+      "coords": {"x": 520, "y":  180}
+    },
+    {
+      "id": 23,
+      "name": "Efirus",
+      "type": "ground",
+      "coords": {"x": 490, "y":  210}
+    },
+    {
+      "id": 24,
+      "name": "Achaia",
+      "type": "ground",
+      "coords": {"x": 540, "y":  265}
+    },
+    {
+      "id": 25,
+      "name": "Creta",
+      "type": "ground",
+      "coords": {"x": 600, "y":  290}
+    },
+    {
+      "id": 26,
+      "name": "Sicilia",
+      "type": "ground",
+      "coords": {"x": 410, "y":  310}
+    },
+    {
+      "id": 27,
+      "name": "Mauritania",
+      "type": "ground",
+      "coords": {"x": 160, "y":  470}
+    },
+    {
+      "id": 28,
+      "name": "Numidia",
+      "type": "ground",
+      "coords": {"x": 340, "y":  470}
+    },
+    {
+      "id": 29,
+      "name": "Africa",
+      "type": "ground",
+      "coords": {"x": 360, "y":  380}
+    },
+    {
+      "id": 30,
+      "name": "Cyrenaica",
+      "type": "ground",
+      "coords": {"x": 600, "y":  430}
+    },
+    {
+      "id": 31,
+      "name": "Aegyptus",
+      "type": "ground",
+      "coords": {"x": 750, "y":  380}
+    },
+    {
+      "id": 32,
+      "name": "Judia",
+      "type": "ground",
+      "coords": {"x": 820, "y":  300}
+    },
+    {
+      "id": 33,
+      "name": "Arabia",
+      "type": "ground",
+      "coords": {"x": 865, "y":  300}
+    },
+    {
+      "id": 34,
+      "name": "Syria",
+      "type": "ground",
+      "coords": {"x": 820, "y":  230}
+    },
+    {
+      "id": 35,
+      "name": "Mesopotamia",
+      "type": "ground",
+      "coords": {"x": 865, "y":  230}
+    },
+    {
+      "id": 36,
+      "name": "Cappadocia",
+      "type": "ground",
+      "coords": {"x": 780, "y":  135}
+    },
+    {
+      "id": 37,
+      "name": "Armenia",
+      "type": "ground",
+      "coords": {"x": 830, "y":  140}
+    },
+    {
+      "id": 38,
+      "name": "Ponto",
+      "type": "ground",
+      "coords": {"x": 780, "y":  65}
+    },
+    {
+      "id": 39,
+      "name": "Bithinya",
+      "type": "ground",
+      "coords": {"x": 680, "y":  95}
+    },
+    {
+      "id": 40,
+      "name": "Galatia",
+      "type": "ground",
+      "coords": {"x": 690, "y":  145}
+    },
+    {
+      "id": 41,
+      "name": "Cilicia",
+      "type": "ground",
+      "coords": {"x": 700, "y":  190}
+    },
+    {
+      "id": 42,
+      "name": "Asia",
+      "type": "ground",
+      "coords": {"x": 615, "y":  195}
+    },
+    {
+      "id": 43,
+      "name": "Baleares",
+      "type": "ground",
+      "coords": {"x": 225, "y":  325}
+    },
+    {
+      "id": 44,
+      "name": "Cyprus",
+      "type": "ground",
+      "coords": {"x": 730, "y":  225}
+    }
+  ],
+  "edges": [
+    [0,1],
+    [1,2], [1,3], [1,4],
+    [2,3],
+    [3,4], [3,5], [3,6],
+    [4,6],
+    [5,6],
+    [6,8], [6,15], [6,16],
+    [7,8], [7,4],
+    [8,4],
+    [11,12], [11,7], [11,8],
+    [13,11], [13,12],
+    [14,11], [14,13],
+    [16,17], [16,5],
+    [17,18], [17,5],
+    [18,5], [18,19], [18,20], [18,21],
+    [19,20],
+    [20,21],
+    [21,17], [21,22],
+    [22,23], [22,16], [22,17],
+    [23,16],
+    [24,22], [24,23],
+    [27,28],
+    [28,29], [28,30],
+    [30,31],
+    [31,32],
+    [32,33], [32,34], [32,33], [32,35],
+    [34,35], [34,36],
+    [35,33], [35,37], [35,36],
+    [36,37], [36,40], [36,41],
+    [38,37], [38,36],
+    [39,40], [39,38], [39,36],
+    [40,41],
+    [41,34],
+    [42,39], [42,40], [42,41]
+  ]
+}

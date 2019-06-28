@@ -1,0 +1,14 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+mesa = {git = "https://github.com/sgametrio/mesa.git",editable = true}
+networkx = "*"
+tornado = "*"
+
+[requires]
+python_version = "3.7.3"
