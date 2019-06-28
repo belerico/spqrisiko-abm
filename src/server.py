@@ -27,7 +27,6 @@ def network_portrayal(G):
         return G.node[source]['agent'][0], G.node[target]['agent'][0]
 
     portrayal = dict()
-    print(G.nodes.data('agent')[0][0].coords)
     portrayal['nodes'] = [{'size': node_size(territories[0]),
                            'color': node_color(territories[0]),
                            'tooltip': "{}: {}<br/>coords: {}, {}".format(territories[0].unique_id,

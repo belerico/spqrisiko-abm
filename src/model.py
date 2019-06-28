@@ -2,7 +2,7 @@ import os, json
 import networkx as nx
 import random
 
-from .constants import *
+from . import constants
 from operator import itemgetter
 
 from mesa import Agent, Model
@@ -16,16 +16,16 @@ class SPQRisiko(Model):
 
     def __init__(self, n_players, points_limit):
         # How many agent players wiil be
-        self.n_players = n_players if n_players <= MAX_PLAYERS else MAX_PLAYERS
+        self.n_players = n_players if n_players <= constants.MAX_PLAYERS else constants.MAX_PLAYERS
         # How many computer players will be 
-        self.n_computers = MAX_PLAYERS - n_players
+        self.n_computers = constants.MAX_PLAYERS - n_players
         # Creation of player and computer agents
         self.players = [Player(i, computer=False) for i in range(self.n_players)]
         self.computers = [Player(i, computer=True) for i in range(self.n_players, self.n_players + self.n_computers)]
-        """ print('Players', [c.color for c in self.players])
-        print('Computers', [c.color for c in self.computers]) """
         self.points_limit = points_limit  # limit at which one player wins
         self.territories = {}
+        self.deck = self.random.shuffle(self.create_deck())
+        self.thrashed_cards = []
         # Initialize map
         self.G, self.territories_dict = self.create_graph_map()
         self.grid = NetworkGrid(self.G)
@@ -67,6 +67,55 @@ class SPQRisiko(Model):
 
         return graph_map, territories_dict
 
+    @staticmethod
+    def create_deck(custom_numbers=None):
+        # Read deck from configuration file
+        deck = []
+        with open(os.path.join(os.path.dirname(__file__), "config/cards.json"), "r") as f:
+            cards = json.load(f)
+
+        # custom cards' numbers
+        if custom_numbers:
+            # do something
+            return deck
+        for card in cards:
+            c = {
+                "type": card["type"],
+                "adds_on_tris": card["adds_on_tris"],
+                "image": card["image"]
+            }
+            for _ in range(card["number_in_deck"]):
+                deck.append(c)
+
+        return deck
+
+    def draw_a_card(self):
+        # if deck is empty, refill from thrashed cards
+        if len(self.deck) == 0:
+            if len(self.thrashed_cards) == 0:
+                # We finished cards, players must do some tris to refill deck!
+                return None
+            self.deck.extend(self.thrashed_cards)
+
+        # return last card from deck
+        return self.deck.pop()
+
+    @staticmethod
+    def reinforces_from_tris(cards):
+        assert len(cards) == 3, "Wrong number of cards given to 'tris' method"
+        cards_in_tris = set([card["type"] for card in cards])
+        assert len(cards_in_tris) == 3 or len(cards_in_tris) == 1, \
+            "Tris must be composed of three different cards or three of the same type"
+        reinforces = {
+            "legionaries": 8 if len(cards_in_tris) == 1 else 10,
+            "centers": 0,
+            "trireme": 0
+        }
+        for card in cards:
+            for key, value in card["adds_on_tris"].items():
+                reinforces[key] += value
+        return reinforces
+
     def step(self):
         self.schedule.step()
 
@@ -81,7 +130,7 @@ class Player(Agent):
         # computer: boolean, human or artificial player
         # artificial players are passive-only
         self.computer = computer
-        self.color = COLORS[unique_id % MAX_PLAYERS]  # one color per id
+        self.color = constants.COLORS[unique_id % constants.MAX_PLAYERS]  # one color per id
         super().__init__(unique_id,  model)
 
 
