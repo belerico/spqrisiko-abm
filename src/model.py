@@ -1,5 +1,6 @@
 import os, json
 import networkx as nx
+import random
 
 from .constants import *
 from operator import itemgetter
@@ -14,19 +15,42 @@ class SPQRisiko(Model):
     """A SPQRisiko model with some number of players"""
 
     def __init__(self, n_players, points_limit):
+        # How many agent players wiil be
         self.n_players = n_players if n_players <= MAX_PLAYERS else MAX_PLAYERS
+        # How many computer players will be 
+        self.n_computers = MAX_PLAYERS - n_players
+        # Creation of player and computer agents
+        self.players = [Player(i, computer=False) for i in range(self.n_players)]
+        self.computers = [Player(i, computer=True) for i in range(self.n_players, self.n_players + self.n_computers)]
+        """ print('Players', [c.color for c in self.players])
+        print('Computers', [c.color for c in self.computers]) """
         self.points_limit = points_limit  # limit at which one player wins
         self.territories = {}
         # Initialize map
         self.G, self.territories_dict = self.create_graph_map()
         self.grid = NetworkGrid(self.G)
         # self.schedule = RandomActivation(self)
+        
+        # random.seed(42)
+        
+        territories = list(range(45))
+        random.shuffle(territories)
+        
+        last = None
 
         # Connect nodes to territories
-        for i, node in enumerate(self.G.nodes()):
-            t = Territory(*itemgetter("id", "name", "type", "coords")(self.territories_dict["territories"][i]))
-
+        for i, node in enumerate(territories):
+            t = Territory(*itemgetter("id", "name", "type", "coords")(self.territories_dict["territories"][node]))
+            if i < 9 * self.n_players:
+                t.armies = 2
+                t.owner = self.players[i % self.n_players]
+            else:
+                t.armies = 7
+                t.owner = self.computers[i % self.n_computers]
             self.grid.place_agent(t, node)
+
+        
+
 
     @staticmethod
     def create_graph_map():

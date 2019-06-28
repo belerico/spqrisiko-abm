@@ -12,7 +12,10 @@ def network_portrayal(G):
         return agent.armies + 3
 
     def node_color(agent):
-        return '#FF0000'
+        if agent.owner is None:
+            return '#FF0000'
+        return agent.owner.color
+        # return '#FF0000'
 
     def edge_color(agent1, agent2):
         return '#e8e8e8'
@@ -49,7 +52,7 @@ def network_portrayal(G):
 network = NetworkModule(network_portrayal, 500, 889, canvas_background="/assets/images/map889x500.jpg", library='d3')
 
 model_params = {
-    'n_players': UserSettableParameter('slider', 'Number of players', 3, 3, 5, 1,
+    'n_players': UserSettableParameter('slider', 'Number of players', 4, 3, 5, 1,
                                        description='Choose how many players should play the game'),
     'points_limit': UserSettableParameter('slider', 'Points limit', 100, 100, 500, 5,
                                        description='How many points should a player reach to win the war?'),
