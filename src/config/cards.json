@@ -1,0 +1,42 @@
+[
+  {
+    "type": "vessillo",
+    "number_in_deck": 15,
+    "adds_on_tris": {
+      "trireme": 0,
+      "legionaries": 2,
+      "centers": 0
+    },
+    "image": "images/legionario.png"
+  },
+  {
+    "type": "centro",
+    "number_in_deck": 5,
+    "adds_on_tris": {
+      "trireme": 0,
+      "legionaries": 0,
+      "centers": 1
+    },
+    "image": "images/legionario.png"
+  },
+  {
+    "type": "legionario",
+    "number_in_deck": 25,
+    "adds_on_tris": {
+      "trireme": 0,
+      "legionaries": 0,
+      "centers": 0
+    },
+    "image": "images/legionario.png"
+  },
+  {
+    "type": "trireme",
+    "number_in_deck": 10,
+    "adds_on_tris": {
+      "trireme": 1,
+      "legionaries": 0,
+      "centers": 0
+    },
+    "image": "images/legionario.png"
+  }
+]

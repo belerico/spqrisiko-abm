@@ -18,7 +18,6 @@ lib/
 lib64/
 parts/
 sdist/
-src/
 var/
 wheels/
 *.egg-info/
@@ -104,8 +103,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-<<<<<<< HEAD
+.vscode
 *.pdf
-=======
 .idea
->>>>>>> 43bc672fccef1ed48a0e215b01b8f9c49576c5a8
