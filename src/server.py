@@ -1,9 +1,6 @@
-import math
-
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import NetworkModule
-import tornado
 import os
 from .model import SPQRisiko
 
@@ -27,13 +24,15 @@ def network_portrayal(G):
         return G.node[source]['agent'][0], G.node[target]['agent'][0]
 
     portrayal = dict()
+    print(G.nodes.data('agent')[0][0].coords)
     portrayal['nodes'] = [{'size': node_size(territories[0]),
                            'color': node_color(territories[0]),
-                           'tooltip': "{}<br/>coords: {}, {}".format(territories[0].dict["name"],
-                                                                                       territories[0].dict["coords"]["x"],
-                                                                                       territories[0].dict["coords"]["y"]),
-                           "xx": territories[0].dict["coords"]["x"],
-                           "yy": territories[0].dict["coords"]["y"],
+                           'tooltip': "{}: {}<br/>coords: {}, {}".format(territories[0].unique_id,
+                                                                         territories[0].name,
+                                                                         territories[0].coords["x"],
+                                                                         territories[0].coords["y"]),
+                           "xx": territories[0].coords["x"],
+                           "yy": territories[0].coords["y"],
                            }
                           for (_, territories) in G.nodes.data('agent')]
 
@@ -50,8 +49,10 @@ def network_portrayal(G):
 network = NetworkModule(network_portrayal, 500, 889, canvas_background="/assets/images/map889x500.jpg", library='d3')
 
 model_params = {
-    'n_players': UserSettableParameter('slider', 'Number of players', 1, 3, 5, 1,
+    'n_players': UserSettableParameter('slider', 'Number of players', 3, 3, 5, 1,
                                        description='Choose how many players should play the game'),
+    'points_limit': UserSettableParameter('slider', 'Points limit', 100, 100, 500, 5,
+                                       description='How many points should a player reach to win the war?'),
 }
 
 server = ModularServer(SPQRisiko, [network], 'S.P.Q.Risiko',
