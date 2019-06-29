@@ -16,24 +16,25 @@ class SPQRisiko(Model):
     """A SPQRisiko model with some number of players"""
 
     def __init__(self, n_players, points_limit):
+        super().__init__()
         # How many agent players wiil be
         self.n_players = n_players if n_players <= constants.MAX_PLAYERS else constants.MAX_PLAYERS
         # How many computer players will be
         self.n_computers = constants.MAX_PLAYERS - n_players
         # Creation of player and computer agents
-        self.players = [Player(i, computer=False)
+        self.players = [Player(i, computer=False, model=self)
                         for i in range(self.n_players)]
         self.computers = [
-            Player(i, computer=True)
+            Player(i, computer=True, model=self)
             for i in range(self.n_players, self.n_players + self.n_computers)]
         self.points_limit = points_limit  # limit at which one player wins
         self.territories = {}
-        self.deck = self.random.shuffle(self.create_deck())
+        # self.deck = self.random.shuffle(self.create_deck())
         self.thrashed_cards = []
         # Initialize map
         self.G, self.territories_dict = self.create_graph_map()
         self.grid = NetworkGrid(self.G)
-        # self.schedule = RandomActivation(self)
+        self.schedule = RandomActivation(self)
 
         territories = list(range(45))
         random.shuffle(territories)
@@ -127,7 +128,18 @@ class SPQRisiko(Model):
                 reinforces[key] += value
         return reinforces
 
+    def count_players_territories_power_places(self):
+        territories = [0] * self.n_players
+        power_places = [0] * self.n_players 
+        for territory in self.grid.get_all_cell_contents():
+            if not territory.owner.computer:
+                territories[territory.owner.unique_id] += 1
+                if territory.power_place:
+                    power_places[territory.owner.unique_id] += 1
+        return territories, power_places
+
     def step(self):
+        print(self.count_players_territories_power_places())
         self.schedule.step()
 
     def run_model(self, n):
@@ -141,9 +153,22 @@ class Player(Agent):
         # computer: boolean, human or artificial player
         # artificial players are passive-only
         self.computer = computer
+        self.victory_points = 0
         self.color = constants.COLORS[unique_id %
                                       constants.MAX_PLAYERS]  # one color per id
         super().__init__(unique_id,  model)
+
+    def update_victory_points(
+            self, cc_lens, territories_per_players: list, power_places: list):
+        # cc_lens: max connected components (of territories) lens per players
+        # where are situated power places
+        m = max(territories_per_players)
+        players_max_territories = [
+            player for player, n_territories
+            in enumerate(territories_per_players) if n_territories == m]
+        if len(players_max_territories) == 1 and players_max_territories[0] == self.unique_id:
+            self.victory_points += 1
+        self.victory_points += power_places[self.unique_id]   
 
 
 class Territory(Agent):
@@ -155,6 +180,7 @@ class Territory(Agent):
         self.type = type
         self.coords = coords
         self.armies = 2
+        self.power_place = False
         super().__init__(unique_id, model)
 
     def __hash__(self):
