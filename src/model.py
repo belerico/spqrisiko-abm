@@ -28,7 +28,7 @@ class SPQRisiko(Model):
             for i in range(self.n_players, self.n_players + self.n_computers)]
         self.points_limit = points_limit  # limit at which one player wins
         self.territories = {}
-        # self.deck = self.random.shuffle(self.create_deck())
+        self.deck = self.random.shuffle(self.create_deck())
         self.thrashed_cards = []
         # Initialize map
         self.G, self.territories_dict = self.create_graph_map()
@@ -56,8 +56,6 @@ class SPQRisiko(Model):
             t = Territory(*itemgetter("id", "name", "type", "coords")
                           (self.territories_dict["territories"][node]))
             if i < 9 * self.n_players:
-                if node == 15 and self.n_players == 4:
-                    continue
                 t.armies = 2
                 t.owner = self.players[i % self.n_players]
             else:
