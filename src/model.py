@@ -1,4 +1,5 @@
-import os, json
+import os
+import json
 import networkx as nx
 import random
 
@@ -17,40 +18,52 @@ class SPQRisiko(Model):
     def __init__(self, n_players, points_limit):
         # How many agent players wiil be
         self.n_players = n_players if n_players <= constants.MAX_PLAYERS else constants.MAX_PLAYERS
-        # How many computer players will be 
+        # How many computer players will be
         self.n_computers = constants.MAX_PLAYERS - n_players
         # Creation of player and computer agents
-        self.players = [Player(i, computer=False) for i in range(self.n_players)]
-        self.computers = [Player(i, computer=True) for i in range(self.n_players, self.n_players + self.n_computers)]
+        self.players = [Player(i, computer=False)
+                        for i in range(self.n_players)]
+        self.computers = [
+            Player(i, computer=True)
+            for i in range(self.n_players, self.n_players + self.n_computers)]
         self.points_limit = points_limit  # limit at which one player wins
         self.territories = {}
-        self.deck = self.random.shuffle(self.create_deck())
+        # self.deck = self.random.shuffle(self.create_deck())
         self.thrashed_cards = []
         # Initialize map
         self.G, self.territories_dict = self.create_graph_map()
         self.grid = NetworkGrid(self.G)
         # self.schedule = RandomActivation(self)
-        
-        # random.seed(42)
-        
+
         territories = list(range(45))
         random.shuffle(territories)
-        
-        last = None
 
-        # Connect nodes to territories
+        """
+        If there're 4 players, Italia must be owned by the only computer player
+        """
+        if self.n_players == 4:
+            territories.remove(15)  # Remove Italia from the territories
+            t = Territory(*itemgetter("id", "name", "type", "coords")
+                          (self.territories_dict["territories"][15]))
+            t.armies = 7
+            t.owner = self.computers[0]
+            self.grid.place_agent(t, 15)
+
+        """ 
+        Connect nodes to territories and assign them to players
+        """
         for i, node in enumerate(territories):
-            t = Territory(*itemgetter("id", "name", "type", "coords")(self.territories_dict["territories"][node]))
+            t = Territory(*itemgetter("id", "name", "type", "coords")
+                          (self.territories_dict["territories"][node]))
             if i < 9 * self.n_players:
+                if node == 15 and self.n_players == 4:
+                    continue
                 t.armies = 2
                 t.owner = self.players[i % self.n_players]
             else:
                 t.armies = 7
                 t.owner = self.computers[i % self.n_computers]
             self.grid.place_agent(t, node)
-
-        
-
 
     @staticmethod
     def create_graph_map():
@@ -130,14 +143,16 @@ class Player(Agent):
         # computer: boolean, human or artificial player
         # artificial players are passive-only
         self.computer = computer
-        self.color = constants.COLORS[unique_id % constants.MAX_PLAYERS]  # one color per id
+        self.color = constants.COLORS[unique_id %
+                                      constants.MAX_PLAYERS]  # one color per id
         super().__init__(unique_id,  model)
 
 
 class Territory(Agent):
 
     def __init__(self, unique_id, name, type, coords, model=SPQRisiko):
-        self.owner = None  # player or list of players (sea territory can be occupied by multiple players)
+        # player or list of players (sea territory can be occupied by multiple players)
+        self.owner = None
         self.name = name
         self.type = type
         self.coords = coords
@@ -146,4 +161,3 @@ class Territory(Agent):
 
     def __hash__(self):
         return self.unique_id
-

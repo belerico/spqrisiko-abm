@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 pylint = "*"
+autopep8 = "*"
 
 [packages]
 mesa = {git = "https://github.com/sgametrio/mesa.git",editable = true}
