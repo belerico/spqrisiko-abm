@@ -2,6 +2,7 @@ import os
 import json
 import networkx as nx
 import random
+import math
 
 from . import constants
 from operator import itemgetter
@@ -138,6 +139,18 @@ class SPQRisiko(Model):
                     power_places[territory.owner.unique_id] += 1
         return territories, power_places
 
+    def ground_reinforces(self, player_id):
+        territories, _ = self.count_players_territories_power_places()
+        player_territories = territories[player_id]
+        if player_territories > 11:
+            ground_reinforces = math.floor(player_territories / 3)
+        elif player_territories >= 3 and player_territories <= 11:
+            ground_reinforces = 3
+        else:
+            ground_reinforces = 1
+        return ground_reinforces
+
+
     def maximum_empires(self):
         # It's a DFS visit in which we account for
         # the length of every connected components 
@@ -160,10 +173,37 @@ class SPQRisiko(Model):
         return d + 1
 
     def step(self):
+        """ 
         territories, power_places = self.count_players_territories_power_places()
         empires = self.maximum_empires()
         for player in range(self.n_players):
             self.players[player].update_victory_points(empires, territories, power_places)
+        """
+
+        for player in self.players:
+            # 1) Aggiornamento del punteggio
+            territories, power_places = self.count_players_territories_power_places()
+            empires = self.maximum_empires()
+            player.update_victory_points(empires, territories, power_places) 
+            
+            # 2) Fase dei rinforzi
+            ground_reinforces = self.ground_reinforces(player.unique_id)
+            ## TODO
+            # naval_reinforces = ...
+            # use card combination
+            # displace ground, naval and/or power places on the ground
+            
+            # 3) Movimento navale
+            
+            # 4) Combattimento navale
+
+            # 5) Attacchi via mare
+
+            # 6) Attacchi terrestri
+
+            # 7) Spostamento strategico di fine turno
+
+            # 8) Presa della carta
         self.schedule.step()
 
     def run_model(self, n):
@@ -188,7 +228,7 @@ class Player(Agent):
         """ print('cc_lengths: ', cc_lengths)
         print('territories_per_players: ', territories_per_players)
         print('power_places: ', power_places) """
-        
+
         m = max(territories_per_players)
         players_max_territories = [
             player for player, n_territories
