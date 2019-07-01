@@ -3,7 +3,7 @@
     {
       "id": 0,
       "name": "Britannia",
-      "type": "ground",
+      "type": "isle",
       "coords": {"x": 100, "y": 50}
     },
     {
@@ -57,13 +57,13 @@
     {
       "id": 9,
       "name": "Corsica",
-      "type": "ground",
+      "type": "isle",
       "coords": {"x": 305, "y":  250}
     },
     {
       "id": 10,
       "name": "Sardinia",
-      "type": "ground",
+      "type": "isle",
       "coords": {"x": 315, "y":  290}
     },
     {
@@ -153,13 +153,13 @@
     {
       "id": 25,
       "name": "Creta",
-      "type": "ground",
+      "type": "isle",
       "coords": {"x": 600, "y":  290}
     },
     {
       "id": 26,
       "name": "Sicilia",
-      "type": "ground",
+      "type": "isle",
       "coords": {"x": 410, "y":  310}
     },
     {
@@ -261,13 +261,13 @@
     {
       "id": 43,
       "name": "Baleares",
-      "type": "ground",
+      "type": "isle",
       "coords": {"x": 225, "y":  325}
     },
     {
       "id": 44,
       "name": "Cyprus",
-      "type": "ground",
+      "type": "isle",
       "coords": {"x": 730, "y":  225}
     }
   ],

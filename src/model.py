@@ -138,8 +138,32 @@ class SPQRisiko(Model):
                     power_places[territory.owner.unique_id] += 1
         return territories, power_places
 
+    def maximum_empires(self):
+        # It's a DFS visit in which we account for
+        # the length of every connected components 
+        cc_lengths = [[] for _ in range(self.n_players)]
+        for territory in self.grid.get_all_cell_contents():
+            if territory.type == 'ground':
+                territory.found = 0
+        for territory in self.grid.get_all_cell_contents():
+            if not territory.owner.computer and territory.type == 'ground' and territory.found == 0:
+                distance = self.__dfs_visit__(territory, 0)
+                cc_lengths[territory.owner.unique_id].append(distance)
+        return list(map(max, cc_lengths))
+
+    def __dfs_visit__(self, territory, d):
+        territory.found = 1
+        for neighbor in self.grid.get_neighbors(territory.unique_id):
+            neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+            if neighbor.found == 0 and neighbor.owner.unique_id == territory.owner.unique_id:
+                d = self.__dfs_visit__(neighbor, d)
+        return d + 1
+
     def step(self):
-        print(self.count_players_territories_power_places())
+        territories, power_places = self.count_players_territories_power_places()
+        empires = self.maximum_empires()
+        for player in range(self.n_players):
+            self.players[player].update_victory_points(empires, territories, power_places)
         self.schedule.step()
 
     def run_model(self, n):
@@ -159,16 +183,29 @@ class Player(Agent):
         super().__init__(unique_id,  model)
 
     def update_victory_points(
-            self, cc_lens, territories_per_players: list, power_places: list):
-        # cc_lens: max connected components (of territories) lens per players
-        # where are situated power places
+            self, cc_lengths: list, territories_per_players: list, power_places: list):
+        
+        """ print('cc_lengths: ', cc_lengths)
+        print('territories_per_players: ', territories_per_players)
+        print('power_places: ', power_places) """
+        
         m = max(territories_per_players)
         players_max_territories = [
             player for player, n_territories
             in enumerate(territories_per_players) if n_territories == m]
         if len(players_max_territories) == 1 and players_max_territories[0] == self.unique_id:
             self.victory_points += 1
-        self.victory_points += power_places[self.unique_id]   
+
+        m = max(cc_lengths)
+        players_max_empire = [
+            player for player, n_territories
+            in enumerate(cc_lengths) if n_territories == m]
+        if len(players_max_empire) == 1 and players_max_empire[0] == self.unique_id:
+            self.victory_points += 1
+        
+        self.victory_points += power_places[self.unique_id]  
+
+        # print('Victory points: ', self.victory_points) 
 
 
 class Territory(Agent):
@@ -181,6 +218,8 @@ class Territory(Agent):
         self.coords = coords
         self.armies = 2
         self.power_place = False
+        # BFS stats
+        self.found = 0
         super().__init__(unique_id, model)
 
     def __hash__(self):
