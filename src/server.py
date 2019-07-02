@@ -2,20 +2,23 @@ from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import NetworkModule
 import os
-from .model import SPQRisiko
+from .model import SPQRisiko, GroundArea, SeaArea
 
 
 def network_portrayal(G):
     # The model ensures there is always 1 agent per node
 
     def node_size(agent):
-        return agent.armies + 3
+        if isinstance(agent, GroundArea):
+            return agent.armies + 3
+        else:
+            return max(agent.trireme) + 3
 
     def node_color(agent):
-        if agent.owner is None:
-            return '#FF0000'
-        return agent.owner.color
-        # return '#FF0000'
+        if isinstance(agent, GroundArea):
+            return agent.owner.color
+        else:
+            return '#0000ee'
 
     def edge_color(agent1, agent2):
         return '#e8e8e8'
