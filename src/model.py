@@ -215,11 +215,11 @@ class SPQRisiko(Model):
             # player.sacrifice_trireme(sea_area_from, ground_area_to)
 
             # TODO
-            # player.update_naval_reinforces()
             # use card combination
             # displace ground, naval and/or power places on the ground
 
             # 3) Movimento navale
+            # player.naval_movement(sea_area_from, sea_area_to, n_trireme)
 
             # 4) Combattimento navale
 
@@ -318,7 +318,15 @@ class Player(Agent):
         sea_area_from.trireme[self.unique_id] -= 1
         ground_area_to.armies[self.unique_id] += 2
 
-    def update_naval_reinforces(self):
+    def naval_movement(
+        self,
+        sea_area_from,
+        sea_area_to,
+        n_trireme: int):
+
+        sea_area_from.trireme[self.unique_id] -= n_trireme
+        sea_area_to.trireme[self.unique_id] += n_trireme
+
         return 0
 
 class Territory(Agent):
