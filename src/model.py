@@ -140,38 +140,48 @@ class SPQRisiko(Model):
 
     def count_players_sea_areas(self):
         sea_areas = [0] * self.n_players
-        for sea in self.grid.get_all_cell_contents():
-            if isinstance(sea, SeaArea):
-                m = max(sea.trireme)
-                players_max_trireme = [player for player, n_trireme in enumerate(sea.trireme) if n_trireme == m]
-                if len(players_max_trireme) == 1:
-                    sea_areas[players_max_trireme] += 1
+
+        for sea in self.territories_dict['sea_areas']:
+            sea = self.grid.get_cell_list_contents([sea['id']])[0]
+            m = max(sea.trireme)
+            players_max_trireme = [player for player, n_trireme in enumerate(sea.trireme) if n_trireme == m]
+            if len(players_max_trireme) == 1:
+                sea_areas[players_max_trireme] += 1
+
         return sea_areas
 
     def count_players_territories_power_places(self):
         territories = [0] * self.n_players
         power_places = [0] * self.n_players
-        for territory in self.grid.get_all_cell_contents():
-        # for territory in self.territories_dict['territories']:
-            # territory = self.grid.get_cell_list_contents([territory['id']])
-            if isinstance(territory, GroundArea):
-                if not territory.owner.computer:
-                    territories[territory.owner.unique_id] += 1
-                    if territory.power_place:
-                        power_places[territory.owner.unique_id] += 1
+
+        # for territory in self.grid.get_all_cell_contents():
+        for territory in self.territories_dict['territories']:
+            territory = self.grid.get_cell_list_contents([territory['id']])[0]
+            # if isinstance(territory, GroundArea):
+            if not territory.owner.computer:
+                territories[territory.owner.unique_id] += 1
+                if territory.power_place:
+                    power_places[territory.owner.unique_id] += 1
+        
         return territories, power_places
 
     def maximum_empires(self):
         # It's a DFS visit in which we account for
         # the length of every connected components
+        
         cc_lengths = [0] * self.n_players
-        for territory in self.grid.get_all_cell_contents():
+        
+        for territory in self.territories_dict['territories']:
+            territory = self.grid.get_cell_list_contents([territory['id']])[0]
             territory.found = 0
-        for territory in self.grid.get_all_cell_contents():
-            if isinstance(territory, GroundArea) and not territory.owner.computer and territory.found == 0:
+        
+        for territory in self.territories_dict['territories']:
+            territory = self.grid.get_cell_list_contents([territory['id']])[0]
+            if not territory.owner.computer and territory.found == 0:
                 distance = self.__dfs_visit__(territory, 0)
                 if distance > cc_lengths[territory.owner.unique_id]:
                     cc_lengths[territory.owner.unique_id] = distance
+        
         return cc_lengths
 
     def __dfs_visit__(self, territory, d):
@@ -199,10 +209,13 @@ class SPQRisiko(Model):
             player.update_victory_points(empires, territories, sea_areas, power_places)
 
             # 2) Fase dei rinforzi
-            player.update_ground_reinforces(
+            player.update_ground_reinforces_power_places()
+            ground_reinforces = player.get_ground_reinforces(
                 territories, power_places)
-            # player.update_naval_reinforces()
+            # player.sacrifice_trireme(sea_area_from, ground_area_to)
+
             # TODO
+            # player.update_naval_reinforces()
             # use card combination
             # displace ground, naval and/or power places on the ground
 
@@ -225,19 +238,25 @@ class SPQRisiko(Model):
 
 
 class Player(Agent):
+    
+    def __init__(
+        self, 
+        unique_id, 
+        computer, 
+        model=SPQRisiko):
 
-    def __init__(self, unique_id, computer, model=SPQRisiko):
         # computer: boolean, human or artificial player
         # artificial players are passive-only
         self.computer = computer
         self.victory_points = 0
-        self.ground_reinforces = 0
         self.color = constants.COLORS[unique_id %
                                       constants.MAX_PLAYERS]  # one color per id
         super().__init__(unique_id,  model)
 
     def update_victory_points(
-            self, cc_lengths: list, territories_per_players: list,
+            self, 
+            cc_lengths: list, 
+            territories_per_players: list,
             sea_areas_per_players: list,
             power_places: list):
 
@@ -271,28 +290,47 @@ class Player(Agent):
 
         print('Victory points: ', self.victory_points)
 
-    def update_ground_reinforces(
-            self, territories_per_players: list, power_places: list):
-        self.ground_reinforces = 0
-
+    def get_ground_reinforces(
+            self, 
+            territories_per_players: list):
+        
         player_territories = territories_per_players[self.unique_id]
         if player_territories > 11:
-            self.ground_reinforces = math.floor(player_territories / 3)
+            ground_reinforces = math.floor(player_territories / 3)
         elif player_territories >= 3 and player_territories <= 11:
-            self.ground_reinforces = 3
+            ground_reinforces = 3
         else:
-            self.ground_reinforces = 1
+            ground_reinforces = 1
 
-        self.ground_reinforces += power_places[self.unique_id]
+        return ground_reinforces
 
-        print('Ground reinforces: ', self.ground_reinforces)
+    def update_ground_reinforces_power_places(self):
+        for territory in self.model.territories_dict['territories']:
+            territory = self.model.grid.get_cell_list_contents([territory['id']])[0]
+            if territory.owner == self.unique_id and territory.power_place:
+                territory.armies += 1
+
+    def sacrifice_trireme(
+        self, 
+        sea_area_from, 
+        ground_area_to):
+
+        sea_area_from.trireme[self.unique_id] -= 1
+        ground_area_to.armies[self.unique_id] += 2
 
     def update_naval_reinforces(self):
         return 0
 
 class Territory(Agent):
 
-    def __init__(self, unique_id, name, type, coords, model=SPQRisiko):
+    def __init__(
+        self, 
+        unique_id, 
+        name, 
+        type, 
+        coords, 
+        model=SPQRisiko):
+
         # player or list of players (sea territory can be occupied by multiple players)
         self.name = name
         self.type = type
@@ -307,7 +345,14 @@ class Territory(Agent):
 
 class GroundArea(Territory):
 
-    def __init__(self, unique_id, name, type, coords, model=SPQRisiko):
+    def __init__(
+        self, 
+        unique_id, 
+        name, 
+        type, 
+        coords, 
+        model=SPQRisiko):
+
         Territory.__init__(self, unique_id, name, type, coords, model)
         self.owner = None
         self.armies = 2
@@ -316,7 +361,14 @@ class GroundArea(Territory):
 
 class SeaArea(Territory):
 
-    def __init__(self, unique_id, name, type, coords, model=SPQRisiko):
+    def __init__(
+        self, 
+        unique_id, 
+        name, 
+        type, 
+        coords, 
+        model=SPQRisiko):
+    
         Territory.__init__(self, unique_id, name, type, coords, model)
         # Each position is a player
         # self.owners = [None] * model.n_players
