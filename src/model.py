@@ -37,7 +37,12 @@ class SPQRisiko(Model):
         # Initialize map
         self.G, self.territories_dict = self.create_graph_map()
         self.grid = NetworkGrid(self.G)
+        # Schedule
         self.schedule = RandomActivation(self)
+        # Subgraphs
+        self.ground_areas = []
+        self.sea_areas = []
+
 
         territories = list(range(45))
         random.shuffle(territories)
@@ -52,6 +57,7 @@ class SPQRisiko(Model):
             t.armies = 7
             t.owner = self.computers[0]
             self.grid.place_agent(t, 15)
+            self.ground_areas.append(self.grid.get_cell_list_contents([15])[0])
 
         """ 
         Connect nodes to territories and assign them to players
@@ -66,6 +72,7 @@ class SPQRisiko(Model):
                 t.armies = 7
                 t.owner = self.computers[i % self.n_computers]
             self.grid.place_agent(t, node)
+            self.ground_areas.append(self.grid.get_cell_list_contents([node])[0])
 
         """
         Add sea area
@@ -74,6 +81,8 @@ class SPQRisiko(Model):
             t = SeaArea(*itemgetter("id", "name", "type", "coords")
                         (self.territories_dict["sea_areas"][i]), model=self)
             self.grid.place_agent(t, node)
+            self.sea_areas.append(self.grid.get_cell_list_contents([node])[0])
+
 
     @staticmethod
     def create_graph_map():
@@ -144,8 +153,9 @@ class SPQRisiko(Model):
     def count_players_sea_areas(self):
         sea_areas = [0] * self.n_players
 
-        for sea in self.territories_dict['sea_areas']:
-            sea = self.grid.get_cell_list_contents([sea['id']])[0]
+        # for sea in self.territories_dict['sea_areas']:
+        for sea in self.sea_areas:
+            # sea = self.grid.get_cell_list_contents([sea['id']])[0]
             m = max(sea.trireme)
             players_max_trireme = [player for player, n_trireme in enumerate(sea.trireme) if n_trireme == m]
             if len(players_max_trireme) == 1:
@@ -158,8 +168,9 @@ class SPQRisiko(Model):
         power_places = [0] * self.n_players
 
         # for territory in self.grid.get_all_cell_contents():
-        for territory in self.territories_dict['territories']:
-            territory = self.grid.get_cell_list_contents([territory['id']])[0]
+        # for territory in self.territories_dict['territories']:
+        for territory in self.ground_areas:
+            # territory = self.grid.get_cell_list_contents([territory['id']])[0]
             # if isinstance(territory, GroundArea):
             if not territory.owner.computer:
                 territories[territory.owner.unique_id] += 1
@@ -174,12 +185,14 @@ class SPQRisiko(Model):
         
         cc_lengths = [0] * self.n_players
         
-        for territory in self.territories_dict['territories']:
-            territory = self.grid.get_cell_list_contents([territory['id']])[0]
+        # for territory in self.territories_dict['territories']:
+        #     territory = self.grid.get_cell_list_contents([territory['id']])[0]
+        for territory in self.ground_areas:
             territory.found = 0
         
-        for territory in self.territories_dict['territories']:
-            territory = self.grid.get_cell_list_contents([territory['id']])[0]
+        # for territory in self.territories_dict['territories']:
+        #     territory = self.grid.get_cell_list_contents([territory['id']])[0]
+        for territory in self.ground_areas:
             if not territory.owner.computer and territory.found == 0:
                 distance = self.__dfs_visit__(territory, 0)
                 if distance > cc_lengths[territory.owner.unique_id]:
