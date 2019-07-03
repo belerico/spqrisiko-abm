@@ -1,4 +1,6 @@
 import math
+import random
+import operator
 from . import constants
 # from .model import SPQRisiko
 from .territory import GroundArea, SeaArea
@@ -93,3 +95,30 @@ class Player(Agent):
 
         sea_area_from.trireme[self.unique_id] -= n_trireme
         sea_area_to.trireme[self.unique_id] += n_trireme
+
+    def naval_combact(self, sea_area: SeaArea, adversary, n_attack_trireme, n_defense_trireme):
+        attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(n_attack_trireme)], reverse=True)
+        defender_dice_outcome = sorted([random.randint(1,6) for _ in range(n_defense_trireme)], reverse=True)
+        print('Attacker outcome: ', attacker_dice_outcome)
+        print('Defender outcome; ', defender_dice_outcome)
+        # outcome = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
+        if len(attacker_dice_outcome) > len(defender_dice_outcome):
+            for i, def_outcome in enumerate(defender_dice_outcome):
+                if attacker_dice_outcome[i] > def_outcome:
+                    sea_area.trireme[adversary.unique_id] -= 1
+                    print('Defender lose one trireme')
+                elif attacker_dice_outcome[i] < def_outcome:
+                    sea_area.trireme[self.unique_id] -= 1
+                    print('Attacker lose one trireme')
+                else:
+                    print('No one loses trireme')
+        else:
+            for i, att_outcome in enumerate(attacker_dice_outcome):
+                if att_outcome > defender_dice_outcome[i]:
+                    sea_area.trireme[adversary.unique_id] -= 1
+                    print('Defender lose one trireme')
+                elif att_outcome < defender_dice_outcome[i]:
+                    sea_area.trireme[self.unique_id] -= 1
+                    print('Attacker lose one trireme')
+                else:
+                    print('No one loses trireme')

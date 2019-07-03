@@ -53,4 +53,6 @@ class SeaArea(Territory):
         Territory.__init__(self, unique_id, name, type, coords, model)
         # Each position is a player
         # self.owners = [None] * model.n_players
+        # In every sea area there must be only one combact per round 
+        self.already_fought = False
         self.trireme = [0] * model.n_players 

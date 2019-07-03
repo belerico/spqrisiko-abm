@@ -19,7 +19,9 @@ def network_portrayal(G):
         if isinstance(agent, GroundArea):
             return agent.owner.color
         else:
-            return '#0000ee'
+            max_owner = agent.trireme.index(max(agent.trireme))
+            return agent.model.players[max_owner].color
+            # return '#0000ee'
 
     def edge_color(agent1, agent2):
         return '#e8e8e8'

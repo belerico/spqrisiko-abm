@@ -80,6 +80,7 @@ class SPQRisiko(Model):
         for i, node in enumerate(range(45, 57)):
             t = SeaArea(*itemgetter("id", "name", "type", "coords")
                         (self.territories_dict["sea_areas"][i]), model=self)
+            t.trireme = [random.randint(0, 5) for _ in range(self.n_players)]
             self.grid.place_agent(t, node)
             self.sea_areas.append(self.grid.get_cell_list_contents([node])[0])
 
@@ -159,7 +160,7 @@ class SPQRisiko(Model):
             m = max(sea.trireme)
             players_max_trireme = [player for player, n_trireme in enumerate(sea.trireme) if n_trireme == m]
             if len(players_max_trireme) == 1:
-                sea_areas[players_max_trireme] += 1
+                sea_areas[players_max_trireme[0]] += 1
 
         return sea_areas
 
@@ -215,7 +216,7 @@ class SPQRisiko(Model):
         for player in range(self.n_players):
             self.players[player].update_victory_points(empires, territories, power_places)
         """
-
+        # print(self.grid.get_cell_list_contents(15))
         for player in self.players:
             territories, power_places = self.count_players_territories_power_places()
             sea_areas = self.count_players_sea_areas()
@@ -237,6 +238,38 @@ class SPQRisiko(Model):
             # player.naval_movement(sea_area_from, sea_area_to, n_trireme)
 
             # 4) Combattimento navale
+            # Get all sea_areas that the current player can attack
+            player_sea_areas = [
+                sea_area 
+                for sea_area in self.sea_areas 
+                if sea_area.trireme[player.unique_id] > 0 and 
+                len([
+                    n_trireme 
+                    for adv, n_trireme in enumerate(sea_area.trireme) 
+                    if player.unique_id != adv and n_trireme > 0
+                ]) > 0
+            ]
+            
+            for sea_area in player_sea_areas:
+                sea_area.already_fought = True
+                possible_adversaries = [
+                    adv 
+                    for adv, n_trireme in enumerate(sea_area.trireme) 
+                    if player.unique_id != adv and n_trireme > 0
+                ]
+                # pick a random player to attack
+                adversary = random.randint(0, len(possible_adversaries) - 1)
+                adversary = self.players[possible_adversaries[adversary]]
+                #Randomly select how many attack and defense trireme
+                n_attack_trireme = random.randint(1, sea_area.trireme[player.unique_id] if sea_area.trireme[player.unique_id] <= 3 else 3)
+                # The defender must always use the maximux number of armies to defend itself
+                n_defense_trireme = sea_area.trireme[adversary.unique_id] if sea_area.trireme[adversary.unique_id] <= 3 else 3
+                # Let's combact biatch!!
+                print('Start battle!')
+                print('Player ' + str(player.unique_id) + ' attacks Player ' + str(adversary.unique_id) + ' on ' + sea_area.name)
+                print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attack_trireme) + ' trireme')
+                print('Player ' + str(adversary.unique_id) + ' defends with ' + str(n_defense_trireme) + ' trireme')
+                player.naval_combact(sea_area, adversary, n_attack_trireme, n_defense_trireme)
 
             # 5) Attacchi via mare
 
