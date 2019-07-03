@@ -327,8 +327,6 @@ class Player(Agent):
         sea_area_from.trireme[self.unique_id] -= n_trireme
         sea_area_to.trireme[self.unique_id] += n_trireme
 
-        return 0
-
 class Territory(Agent):
 
     def __init__(
