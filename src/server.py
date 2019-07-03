@@ -2,7 +2,8 @@ from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import NetworkModule
 import os
-from .model import SPQRisiko, GroundArea, SeaArea
+from .model import SPQRisiko
+from .territory import GroundArea, SeaArea
 
 
 def network_portrayal(G):
