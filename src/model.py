@@ -284,7 +284,7 @@ class SPQRisiko(Model):
                         # if the current player posess a number of trireme that permits him
                         # to attack at least another player
                         if isinstance(neighbor, SeaArea) and neighbor.trireme[player.unique_id] > min(neighbor.trireme):
-                            # print('Trireme in ' + neighbor.name + ': ', neighbor.trireme)
+                            print('Trireme in ' + neighbor.name + ': ', neighbor.trireme)
                             for sea_area_neighbor in self.grid.get_neighbors(neighbor.unique_id):
                                 sea_area_neighbor = self.grid.get_cell_list_contents([sea_area_neighbor])[0]
                                 if isinstance(sea_area_neighbor, GroundArea) and \
