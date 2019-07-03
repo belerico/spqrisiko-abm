@@ -210,8 +210,7 @@ class SPQRisiko(Model):
 
             # 2) Fase dei rinforzi
             player.update_ground_reinforces_power_places()
-            ground_reinforces = player.get_ground_reinforces(
-                territories, power_places)
+            ground_reinforces = player.get_ground_reinforces(territories)
             # player.sacrifice_trireme(sea_area_from, ground_area_to)
 
             # TODO
