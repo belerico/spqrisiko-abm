@@ -300,12 +300,11 @@ class SPQRisiko(Model):
                     # Randomly select how many attack and defense trireme
                     n_attack_armies = random.randint(1, attackable_ground_area[0].armies - 1)
                     # The defender must always use the maximux number of armies to defend itself
-                    n_defense_armies = attackable_ground_area[1].armies if attackable_ground_area[1].armies <= 3 else 3   
+                    # n_defense_armies = attackable_ground_area[1].armies if attackable_ground_area[1].armies <= 3 else 3   
                     print('Start battle!')
                     print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
-                    print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attack_armies) + ' armies')
-                    print('Player ' + str(attackable_ground_area[1].owner.unique_id) + ' defends with ' + str(n_defense_armies) + ' armies')        
-                    attackable_ground_area = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attack_armies, n_defense_armies)
+                    print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attack_armies) + ' armies. Maximux armies: ' + str(attackable_ground_area[0].armies))
+                    attackable_ground_area = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attack_armies)
 
             # 6) Attacchi terrestri
 

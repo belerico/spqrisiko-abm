@@ -132,12 +132,12 @@ class Player(Agent):
         self, 
         ground_area_from:GroundArea,
         ground_area_to: GroundArea,
-        n_attacker_armies,
-        n_defender_armies):
+        n_attacker_armies):
 
         while n_attacker_armies > 0 and ground_area_to.armies > 0:
             attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, n_attacker_armies))], reverse=True)
-            defender_dice_outcome = sorted([random.randint(1,6) for _ in range(n_defender_armies)], reverse=True)
+            defender_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, ground_area_to.armies))], reverse=True)
+            print('Player ' + str(ground_area_to.owner.unique_id) + ' defends with ' + str(min(3, ground_area_to.armies)) + ' armies. Maximux armies: ' + str(ground_area_to.armies))        
             print('Attacker outcome: ', attacker_dice_outcome)
             print('Defender outcome; ', defender_dice_outcome)
             # outcome = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
@@ -163,10 +163,10 @@ class Player(Agent):
         if ground_area_to.armies == 0:
             print('Defender has lost the area!')
             ground_area_to.owner = ground_area_from.owner
-            ground_area_to.armies = n_attacker_armies - 3
+            ground_area_to.armies = n_attacker_armies
         elif n_attacker_armies == 0:
             print('Attacker lost the battle!')
-            
+
         """ if ground_area_to.armies == 0:
             print('Defender has lost the area!')
             ground_area_to.owner = ground_area_from.owner
