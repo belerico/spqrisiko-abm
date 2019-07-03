@@ -38,6 +38,7 @@ class GroundArea(Territory):
         self.owner = None
         self.armies = 2
         self.power_place = False
+        self.already_attacked_by_sea = False
 
 
 class SeaArea(Territory):

@@ -54,7 +54,7 @@ class SPQRisiko(Model):
             territories.remove(15)  # Remove Italia from the territories
             t = GroundArea(*itemgetter("id", "name", "type", "coords")
                            (self.territories_dict["territories"][15]), model=self)
-            t.armies = 7
+            t.armies = 3
             t.owner = self.computers[0]
             self.grid.place_agent(t, 15)
             self.ground_areas.append(self.grid.get_cell_list_contents([15])[0])
@@ -66,10 +66,10 @@ class SPQRisiko(Model):
             t = GroundArea(*itemgetter("id", "name", "type", "coords")
                            (self.territories_dict["territories"][node]), model=self)
             if i < 9 * self.n_players:
-                t.armies = 2
+                t.armies = random.randint(2, 5)
                 t.owner = self.players[i % self.n_players]
             else:
-                t.armies = 7
+                t.armies = 3
                 t.owner = self.computers[i % self.n_computers]
             self.grid.place_agent(t, node)
             self.ground_areas.append(self.grid.get_cell_list_contents([node])[0])
@@ -238,11 +238,12 @@ class SPQRisiko(Model):
             # player.naval_movement(sea_area_from, sea_area_to, n_trireme)
 
             # 4) Combattimento navale
+            print('\n\nNAVAL COMBACT!!')
             # Get all sea_areas that the current player can attack
             player_sea_areas = [
                 sea_area 
                 for sea_area in self.sea_areas 
-                if sea_area.trireme[player.unique_id] > 0 and 
+                if sea_area.trireme[player.unique_id] > 0 and \
                 len([
                     n_trireme 
                     for adv, n_trireme in enumerate(sea_area.trireme) 
@@ -260,7 +261,7 @@ class SPQRisiko(Model):
                 # pick a random player to attack
                 adversary = random.randint(0, len(possible_adversaries) - 1)
                 adversary = self.players[possible_adversaries[adversary]]
-                #Randomly select how many attack and defense trireme
+                # Randomly select how many attack and defense trireme
                 n_attack_trireme = random.randint(1, sea_area.trireme[player.unique_id] if sea_area.trireme[player.unique_id] <= 3 else 3)
                 # The defender must always use the maximux number of armies to defend itself
                 n_defense_trireme = sea_area.trireme[adversary.unique_id] if sea_area.trireme[adversary.unique_id] <= 3 else 3
@@ -272,18 +273,40 @@ class SPQRisiko(Model):
                 player.naval_combact(sea_area, adversary, n_attack_trireme, n_defense_trireme)
 
             # 5) Attacchi via mare
+            print('\n\nCOMBACT BY SEA!!')
             attackable_ground_areas = []
             for ground_area in self.ground_areas:
-                for neighbor in self.grid.get_neighbors(ground_area.unique_id):
-                    neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-                    if isinstance(neighbor, SeaArea):
-                        for sea_area_neighbor in self.grid.get_neighbors(neighbor.unique_id):
-                            sea_area_neighbor = self.grid.get_cell_list_contents([sea_area_neighbor])[0]
-                            if ground_area.unique_id != sea_area_neighbor.unique_id and isinstance(sea_area_neighbor, GroundArea):
-                                attackable_ground_areas.append(sea_area_neighbor)
+                if ground_area.owner.unique_id == player.unique_id  and ground_area.armies > 1:
+                    for neighbor in self.grid.get_neighbors(ground_area.unique_id):
+                        neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+                        # A player can attack a ground area through sea, only if it posesses a number of
+                        # trireme greater than the possible adversary. In this random version I check only 
+                        # if the current player posess a number of trireme that permits him
+                        # to attack at least another player
+                        if isinstance(neighbor, SeaArea) and neighbor.trireme[player.unique_id] > min(neighbor.trireme):
+                            # print('Trireme in ' + neighbor.name + ': ', neighbor.trireme)
+                            for sea_area_neighbor in self.grid.get_neighbors(neighbor.unique_id):
+                                sea_area_neighbor = self.grid.get_cell_list_contents([sea_area_neighbor])[0]
+                                if isinstance(sea_area_neighbor, GroundArea) and \
+                                    not sea_area_neighbor.owner.computer and \
+                                    ground_area.unique_id != sea_area_neighbor.unique_id and \
+                                    neighbor.trireme[player.unique_id] > neighbor.trireme[sea_area_neighbor.owner.unique_id]:
+
+                                    attackable_ground_areas.append([ground_area, sea_area_neighbor])
 
             for attackable_ground_area in attackable_ground_areas:
-                print('Player ' + str(player.unique_id) + ' can attack on ' + attackable_ground_area.name)
+                if attackable_ground_area[0].armies > 1 and not attackable_ground_area[1].already_attacked_by_sea:
+                    attackable_ground_area[1].already_attacked_by_sea = True
+                    # Randomly select how many attack and defense trireme
+                    n_attack_armies = random.randint(1, attackable_ground_area[0].armies - 1)
+                    # The defender must always use the maximux number of armies to defend itself
+                    n_defense_armies = attackable_ground_area[1].armies if attackable_ground_area[1].armies <= 3 else 3   
+                    print('Start battle!')
+                    print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
+                    print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attack_armies) + ' armies')
+                    print('Player ' + str(attackable_ground_area[1].owner.unique_id) + ' defends with ' + str(n_defense_armies) + ' armies')        
+                    attackable_ground_area = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attack_armies, n_defense_armies)
+
             # 6) Attacchi terrestri
 
             # 7) Spostamento strategico di fine turno

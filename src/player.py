@@ -39,6 +39,7 @@ class Player(Agent):
             player for player, n_territories
             in enumerate(cc_lengths) if n_territories == m]
         if len(players_max_empire) == 1 and players_max_empire[0] == self.unique_id:
+            print('Player ' + str(self.unique_id) + ' gets one victory point for having the maximum empire')
             self.victory_points += 1
 
         m = max(territories_per_players)
@@ -46,6 +47,7 @@ class Player(Agent):
             player for player, n_territories
             in enumerate(territories_per_players) if n_territories == m]
         if len(players_max_territories) == 1 and players_max_territories[0] == self.unique_id:
+            print('Player ' + str(self.unique_id) + ' gets one victory point for having the max number of ground areas')
             self.victory_points += 1
 
         m = max(sea_areas_per_players)
@@ -53,10 +55,13 @@ class Player(Agent):
             player for player, n_sea_areas
             in enumerate(sea_areas_per_players) if n_sea_areas == m]
         if len(players_max_sea_areas) == 1 and players_max_sea_areas[0] == self.unique_id:
+            print('Player ' + str(self.unique_id) + ' gets one victory point for having the max number of sea areas')
             self.victory_points += 1
 
+        if power_places[self.unique_id] > 0:
+            print('Player ' + str(self.unique_id) + ' gets ' + str(power_places[self.unique_id]) + ' victory points from power places')
+        
         self.victory_points += power_places[self.unique_id]
-
         print('Victory points: ', self.victory_points)
 
     def get_ground_reinforces(
@@ -96,9 +101,9 @@ class Player(Agent):
         sea_area_from.trireme[self.unique_id] -= n_trireme
         sea_area_to.trireme[self.unique_id] += n_trireme
 
-    def naval_combact(self, sea_area: SeaArea, adversary, n_attack_trireme, n_defense_trireme):
-        attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(n_attack_trireme)], reverse=True)
-        defender_dice_outcome = sorted([random.randint(1,6) for _ in range(n_defense_trireme)], reverse=True)
+    def naval_combact(self, sea_area: SeaArea, adversary, n_attacker_trireme, n_defender_trireme):
+        attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(n_attacker_trireme)], reverse=True)
+        defender_dice_outcome = sorted([random.randint(1,6) for _ in range(n_defender_trireme)], reverse=True)
         print('Attacker outcome: ', attacker_dice_outcome)
         print('Defender outcome; ', defender_dice_outcome)
         # outcome = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
@@ -122,3 +127,78 @@ class Player(Agent):
                     print('Attacker lose one trireme')
                 else:
                     print('No one loses trireme')
+    
+    def combact_by_sea(
+        self, 
+        ground_area_from:GroundArea,
+        ground_area_to: GroundArea,
+        n_attacker_armies,
+        n_defender_armies):
+
+        while n_attacker_armies > 0 and ground_area_to.armies > 0:
+            attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, n_attacker_armies))], reverse=True)
+            defender_dice_outcome = sorted([random.randint(1,6) for _ in range(n_defender_armies)], reverse=True)
+            print('Attacker outcome: ', attacker_dice_outcome)
+            print('Defender outcome; ', defender_dice_outcome)
+            # outcome = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
+            if len(attacker_dice_outcome) > len(defender_dice_outcome):
+                for i, def_outcome in enumerate(defender_dice_outcome):
+                    if attacker_dice_outcome[i] > def_outcome:
+                        ground_area_to.armies -= 1
+                        print('Defender lose one armies')
+                    else:
+                        ground_area_from.armies -= 1
+                        n_attacker_armies -= 1
+                        print('Attacker lose one armies')
+            else:
+                for i, att_outcome in enumerate(attacker_dice_outcome):
+                    if att_outcome > defender_dice_outcome[i]:
+                        ground_area_to.armies -= 1
+                        print('Defender lose one armies')
+                    else:
+                        ground_area_from.armies -= 1
+                        n_attacker_armies -= 1
+                        print('Attacker lose one armies')
+            
+        if ground_area_to.armies == 0:
+            print('Defender has lost the area!')
+            ground_area_to.owner = ground_area_from.owner
+            ground_area_to.armies = n_attacker_armies - 3
+        elif n_attacker_armies == 0:
+            print('Attacker lost the battle!')
+            
+        """ if ground_area_to.armies == 0:
+            print('Defender has lost the area!')
+            ground_area_to.owner = ground_area_from.owner
+            ground_area_to.armies = n_attacker_armies - 3
+        elif n_attacker_armies - 3 < 0:
+            print('Attacker has only ' + str(n_attacker_armies) + ' left! Last attack!')
+            attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(n_attacker_armies)], reverse=True)
+            defender_dice_outcome = sorted([random.randint(1,6) for _ in range(n_defender_armies)], reverse=True)
+            print('Attacker outcome: ', attacker_dice_outcome)
+            print('Defender outcome; ', defender_dice_outcome)
+            # outcome = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
+            if len(attacker_dice_outcome) > len(defender_dice_outcome):
+                for i, def_outcome in enumerate(defender_dice_outcome):
+                    if attacker_dice_outcome[i] > def_outcome:
+                        ground_area_to.armies -= 1
+                        print('Defender lose one armies')
+                    else:
+                        ground_area_from.armies -= 1
+                        print('Attacker lose one armies')
+            else:
+                for i, att_outcome in enumerate(attacker_dice_outcome):
+                    if att_outcome > defender_dice_outcome[i]:
+                        ground_area_to.armies -= 1
+                        print('Defender lose one armies')
+                    else:
+                        ground_area_from.armies -= 1
+                        print('Attacker lose one armies')
+            if ground_area_to.armies == 0:
+                print('Defender has lost the area!')
+                ground_area_to.owner = ground_area_from.owner
+                ground_area_to.armies = n_attacker_armies
+            else:
+                print('Attacker lost the battle!') """
+
+        return [ground_area_from, ground_area_to]
