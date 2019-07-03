@@ -272,7 +272,18 @@ class SPQRisiko(Model):
                 player.naval_combact(sea_area, adversary, n_attack_trireme, n_defense_trireme)
 
             # 5) Attacchi via mare
+            attackable_ground_areas = []
+            for ground_area in self.ground_areas:
+                for neighbor in self.grid.get_neighbors(ground_area.unique_id):
+                    neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+                    if isinstance(neighbor, SeaArea):
+                        for sea_area_neighbor in self.grid.get_neighbors(neighbor.unique_id):
+                            sea_area_neighbor = self.grid.get_cell_list_contents([sea_area_neighbor])[0]
+                            if ground_area.unique_id != sea_area_neighbor.unique_id and isinstance(sea_area_neighbor, GroundArea):
+                                attackable_ground_areas.append(sea_area_neighbor)
 
+            for attackable_ground_area in attackable_ground_areas:
+                print('Player ' + str(player.unique_id) + ' can attack on ' + attackable_ground_area.name)
             # 6) Attacchi terrestri
 
             # 7) Spostamento strategico di fine turno
