@@ -162,6 +162,7 @@ class Player(Agent):
             
         if ground_area_to.armies == 0:
             print('Defender has lost the area!')
+            ground_area_from.armies -= n_attacker_armies
             ground_area_to.owner = ground_area_from.owner
             ground_area_to.armies = n_attacker_armies
         elif n_attacker_armies == 0:
