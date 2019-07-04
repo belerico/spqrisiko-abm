@@ -23,6 +23,15 @@ def network_portrayal(G):
             return agent.model.players[max_owner].color
             # return '#0000ee'
 
+    def get_info(agent):
+        if isinstance(agent, GroundArea):
+            return "{}<br/>N. armies: {}".format(agent.name, agent.armies)
+        else:
+            s = "{}<br/>".format(agent.name)
+            for player in range(agent.model.n_players):
+                s += "N. trireme player {}: {}<br/>".format(player, agent.trireme[player])
+            return s
+
     def edge_color(agent1, agent2):
         return '#e8e8e8'
 
@@ -35,10 +44,11 @@ def network_portrayal(G):
     portrayal = dict()
     portrayal['nodes'] = [{'size': node_size(territories[0]),
                            'color': node_color(territories[0]),
-                           'tooltip': "{}: {}<br/>coords: {}, {}".format(territories[0].unique_id,
-                                                                         territories[0].name,
-                                                                         territories[0].coords["x"],
-                                                                         territories[0].coords["y"]),
+                        #    'tooltip': "{}: {}<br/>coords: {}, {}".format(territories[0].unique_id,
+                        #                                                  territories[0].name,
+                        #                                                  territories[0].coords["x"],
+                        #                                                  territories[0].coords["y"]),
+                           'tooltip': get_info(territories[0]),
                            "xx": territories[0].coords["x"],
                            "yy": territories[0].coords["y"],
                            }
