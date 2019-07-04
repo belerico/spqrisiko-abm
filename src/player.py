@@ -20,6 +20,7 @@ class Player(Agent):
         self.victory_points = 0
         self.color = constants.COLORS[unique_id %
                                       constants.MAX_PLAYERS]  # one color per id
+        self.cards = []
         super().__init__(unique_id,  model)
 
     def update_victory_points(
@@ -157,6 +158,8 @@ class Player(Agent):
         ground_area_to: GroundArea,
         n_attacker_armies):
 
+        conquered = False
+
         while min(3, n_attacker_armies) >= min(3, ground_area_to.armies) and n_attacker_armies > 0 and ground_area_to.armies > 0:
             attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, n_attacker_armies))], reverse=True)
             defender_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, ground_area_to.armies))], reverse=True)
@@ -199,6 +202,7 @@ class Player(Agent):
             ground_area_from.armies -= n_attacker_armies
             ground_area_to.owner = ground_area_from.owner
             ground_area_to.armies = n_attacker_armies
+            conquered = True
         elif n_attacker_armies == 0:
             print('Attacker lost the battle!')
 
@@ -236,4 +240,4 @@ class Player(Agent):
             else:
                 print('Attacker lost the battle!') """
 
-        return [ground_area_from, ground_area_to]
+        return [ground_area_from, ground_area_to], conquered

@@ -32,7 +32,8 @@ class SPQRisiko(Model):
             Player(i, computer=True, model=self)
             for i in range(self.n_players, self.n_players + self.n_computers)]
         self.points_limit = points_limit  # limit at which one player wins
-        # self.deck = self.random.shuffle(self.create_deck())
+        self.deck = self.create_deck()
+        self.random.shuffle(self.deck)
         self.thrashed_cards = []
         # Initialize map
         self.G, self.territories_dict = self.create_graph_map()
@@ -156,7 +157,6 @@ class SPQRisiko(Model):
 
         # for sea in self.territories_dict['sea_areas']:
         for sea in self.sea_areas:
-            # sea = self.grid.get_cell_list_contents([sea['id']])[0]
             m = max(sea.trireme)
             players_max_trireme = [player for player, n_trireme in enumerate(sea.trireme) if n_trireme == m]
             if len(players_max_trireme) == 1:
@@ -168,11 +168,7 @@ class SPQRisiko(Model):
         territories = [0] * self.n_players
         power_places = [0] * self.n_players
 
-        # for territory in self.grid.get_all_cell_contents():
-        # for territory in self.territories_dict['territories']:
         for territory in self.ground_areas:
-            # territory = self.grid.get_cell_list_contents([territory['id']])[0]
-            # if isinstance(territory, GroundArea):
             if not territory.owner.computer:
                 territories[territory.owner.unique_id] += 1
                 if territory.power_place:
@@ -185,14 +181,10 @@ class SPQRisiko(Model):
         # the length of every connected components
         
         cc_lengths = [0] * self.n_players
-        
-        # for territory in self.territories_dict['territories']:
-        #     territory = self.grid.get_cell_list_contents([territory['id']])[0]
+
         for territory in self.ground_areas:
             territory.found = 0
-        
-        # for territory in self.territories_dict['territories']:
-        #     territory = self.grid.get_cell_list_contents([territory['id']])[0]
+
         for territory in self.ground_areas:
             if not territory.owner.computer and territory.found == 0:
                 distance = self.__dfs_visit__(territory, 0)
@@ -226,6 +218,14 @@ class SPQRisiko(Model):
         won = True if max_points > self.points_limit else False
         return max_player, won
 
+    def put_reinforces(self, player, armies):
+        territories = self.get_territories_by_player(player)
+        random_territory = self.random.randint(0, len(territories) - 1)
+        territories[random_territory].armies += armies
+
+    def get_territories_by_player(self, player):
+        return [t for t in self.ground_areas if t.owner.unique_id == player.unique_id]
+
     def step(self):
         """ 
         territories, power_places = self.count_players_territories_power_places()
@@ -233,12 +233,10 @@ class SPQRisiko(Model):
         for player in range(self.n_players):
             self.players[player].update_victory_points(empires, territories, power_places)
         """
-        top_player, won = self.winner()
-        if won:
-            self.running = False
-            return True
+
         # print(self.grid.get_cell_list_contents(15))
         for player in self.players:
+            can_draw = False
             territories, power_places = self.count_players_territories_power_places()
             sea_areas = self.count_players_sea_areas()
             empires = self.maximum_empires()
@@ -254,7 +252,7 @@ class SPQRisiko(Model):
 
             # 2) Fase dei rinforzi
             player.update_ground_reinforces_power_places()
-            ground_reinforces = player.get_ground_reinforces(territories)
+            self.put_reinforces(player, player.get_ground_reinforces(territories))
             # player.sacrifice_trireme(sea_area_from, ground_area_to)
 
             # TODO
@@ -290,10 +288,9 @@ class SPQRisiko(Model):
                         sea_area.trireme[player.unique_id] >= min(3, adv_n_trireme)
                 ]
                 # pick a random player to attack
-                adversary = random.randint(0, len(possible_adversaries) - 1)
+                adversary = self.random.randint(0, len(possible_adversaries) - 1)
                 adversary = self.players[possible_adversaries[adversary]]
                 # Randomly select how many attack and defense trireme
-                # n_attacker_trireme = random.randint(1, sea_area.trireme[player.unique_id])
                 n_attacker_trireme = sea_area.trireme[player.unique_id]
                 # The defender must always use the maximux number of armies to defend itself
                 # n_defense_trireme = sea_area.trireme[adversary.unique_id] if sea_area.trireme[adversary.unique_id] <= 3 else 3
@@ -329,14 +326,14 @@ class SPQRisiko(Model):
                 if attackable_ground_area[0].armies > 1 and not attackable_ground_area[1].already_attacked_by_sea:
                     attackable_ground_area[1].already_attacked_by_sea = True
                     # Randomly select how many attack and defense trireme
-                    # n_attacker_armies = random.randint(1, attackable_ground_area[0].armies - 1)
                     n_attacker_armies = attackable_ground_area[0].armies - 1
                     # The defender must always use the maximux number of armies to defend itself
-                    # n_defense_armies = attackable_ground_area[1].armies if attackable_ground_area[1].armies <= 3 else 3   
                     print('Start battle!')
                     print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
                     print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attacker_armies) + ' armies. Maximux armies: ' + str(attackable_ground_area[0].armies))
-                    attackable_ground_area = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
+                    attackable_ground_area, conquered = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
+                    if conquered:
+                        can_draw = True
 
             # 6) Attacchi terrestri
             print('\n\nGROUND COMBACT!!')
@@ -355,19 +352,23 @@ class SPQRisiko(Model):
                 if attackable_ground_area[0].armies > 1:
                     attackable_ground_area[1].already_attacked_by_sea = True
                     # Randomly select how many attack and defense trireme
-                    # n_attacker_armies = random.randint(1, attackable_ground_area[0].armies - 1)
                     n_attacker_armies = attackable_ground_area[0].armies - 1
                     # The defender must always use the maximux number of armies to defend itself
-                    # n_defense_armies = attackable_ground_area[1].armies if attackable_ground_area[1].armies <= 3 else 3   
                     print('Start battle!')
                     print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
                     print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attacker_armies) + ' armies. Maximux armies: ' + str(attackable_ground_area[0].armies))
-                    attackable_ground_area = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
+                    attackable_ground_area, conquered = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
+                    if conquered:
+                        can_draw = True
 
 
             # 7) Spostamento strategico di fine turno
 
             # 8) Presa della carta
+            # Il giocatore può dimenticarsi di pescare la carta ahah sarebbe bello fare i giocatori smemorati
+            if can_draw:
+                print("{} can draw".format(player.unique_id))
+                player.cards.append(self.draw_a_card())
 
         self.schedule.step()
         return False
