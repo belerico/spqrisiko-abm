@@ -209,6 +209,23 @@ class SPQRisiko(Model):
                 d = self.__dfs_visit__(neighbor, d)
         return d + 1
 
+    # Controlla se `player` ha vinto oppure se c'è un vincitore tra tutti
+    def winner(self, player=None):
+        if player is not None:
+            if player.victory_points >= self.points_limit:
+                return True
+            return False
+
+        for p in self.players:
+            max_points = -1
+            max_player = None
+            if p.victory_points > max_points:
+                max_points = p.victory_points
+                max_player = p
+
+        won = True if max_points > self.points_limit else False
+        return max_player, won
+
     def step(self):
         """ 
         territories, power_places = self.count_players_territories_power_places()
@@ -216,6 +233,10 @@ class SPQRisiko(Model):
         for player in range(self.n_players):
             self.players[player].update_victory_points(empires, territories, power_places)
         """
+        top_player, won = self.winner()
+        if won:
+            self.running = False
+            return True
         # print(self.grid.get_cell_list_contents(15))
         for player in self.players:
             territories, power_places = self.count_players_territories_power_places()
@@ -224,6 +245,12 @@ class SPQRisiko(Model):
 
             # 1) Aggiornamento del punteggio
             player.update_victory_points(empires, territories, sea_areas, power_places)
+
+            # 1.1) Controllo vittoria
+            if self.winner(player):
+                print("{} - {} ha vinto!".format(player.unique_id, player.color))
+                self.running = False
+                return True
 
             # 2) Fase dei rinforzi
             player.update_ground_reinforces_power_places()
@@ -341,8 +368,11 @@ class SPQRisiko(Model):
             # 7) Spostamento strategico di fine turno
 
             # 8) Presa della carta
+
         self.schedule.step()
+        return False
 
     def run_model(self, n):
         for i in range(n):
-            self.step()
+            if self.step():
+                break
