@@ -103,9 +103,10 @@ class Player(Agent):
 
     def naval_combact(self, sea_area: SeaArea, adversary, n_attacker_trireme):
         parity = False
-        while n_attacker_trireme > 0 and sea_area.trireme[adversary.unique_id] > 0 and not parity:
+        while min(3, n_attacker_trireme) >= min(3, sea_area.trireme[adversary.unique_id]) and n_attacker_trireme > 0 and sea_area.trireme[adversary.unique_id] > 0 and not parity:
             attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, n_attacker_trireme))], reverse=True)
             defender_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, sea_area.trireme[adversary.unique_id]))], reverse=True)
+            print('Player ' + str(self.unique_id) + ' attacks with ' + str(n_attacker_trireme) + ' trireme')
             print('Player ' + str(adversary.unique_id) + ' defends with ' + str(min(3, sea_area.trireme[adversary.unique_id])) + ' trireme')
             print('Attacker outcome: ', attacker_dice_outcome)
             print('Defender outcome: ', defender_dice_outcome)
@@ -141,12 +142,14 @@ class Player(Agent):
                         print('No one loses trireme')
             parity = intra_parity
 
-            if n_attacker_trireme == 0:
-                print('Attacker lost the battle!')
-            elif sea_area.trireme[adversary.unique_id] == 0:
-                print('Defender lost all of his trireme and lost the battle!')
-            elif parity:
-                print('No one loses trireme. Combact done!')
+        if min(3, n_attacker_trireme) < min(3, sea_area.trireme[adversary.unique_id]):
+            print('Attacker must attack with a number of trireme that are greater or equal to the number of defender\'s trireme. Combact done!')
+        elif n_attacker_trireme == 0:
+            print('Attacker lost the battle!')
+        elif sea_area.trireme[adversary.unique_id] == 0:
+            print('Defender lost all of his trireme and lost the battle!')
+        elif parity:
+            print('No one loses trireme. Combact done!')
     
     def combact_by_sea(
         self, 
@@ -154,7 +157,7 @@ class Player(Agent):
         ground_area_to: GroundArea,
         n_attacker_armies):
 
-        while n_attacker_armies > 0 and ground_area_to.armies > 0:
+        while min(3, n_attacker_armies) >= min(3, ground_area_to.armies) and n_attacker_armies > 0 and ground_area_to.armies > 0:
             attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, n_attacker_armies))], reverse=True)
             defender_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, ground_area_to.armies))], reverse=True)
             print('Player ' + str(ground_area_to.owner.unique_id) + ' defends with ' + str(min(3, ground_area_to.armies)) + ' armies. Maximux armies: ' + str(ground_area_to.armies))        
@@ -188,8 +191,10 @@ class Player(Agent):
                         ground_area_from.armies -= 1
                         n_attacker_armies -= 1
                         print('Attacker lose one armies') """
-            
-        if ground_area_to.armies == 0:
+
+        if min(3, n_attacker_armies) < min(3, ground_area_to.armies):
+            print('Attacker must attack with a number of trireme that are greater or equal to the number of defender\'s trireme. Combact done!')
+        elif ground_area_to.armies == 0:
             print('Defender has lost the area!')
             ground_area_from.armies -= n_attacker_armies
             ground_area_to.owner = ground_area_from.owner
