@@ -108,30 +108,39 @@ class Player(Agent):
             defender_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, sea_area.trireme[adversary.unique_id]))], reverse=True)
             print('Player ' + str(adversary.unique_id) + ' defends with ' + str(min(3, sea_area.trireme[adversary.unique_id])) + ' trireme')
             print('Attacker outcome: ', attacker_dice_outcome)
-            print('Defender outcome; ', defender_dice_outcome)
+            print('Defender outcome: ', defender_dice_outcome)
+            intra_parity = True
             # outcome = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
             if len(attacker_dice_outcome) > len(defender_dice_outcome):
                 for i, def_outcome in enumerate(defender_dice_outcome):
                     if attacker_dice_outcome[i] > def_outcome:
                         sea_area.trireme[adversary.unique_id] -= 1
+                        intra_parity = False
                         print('Defender lose one trireme')
                     elif attacker_dice_outcome[i] < def_outcome:
                         sea_area.trireme[self.unique_id] -= 1
                         n_attacker_trireme -= 1
+                        intra_parity = False
                         print('Attacker lose one trireme')
                     else:
-                        parity = True
+                        intra_parity = intra_parity and True
+                        print('No one loses trireme')
             else:
                 for i, att_outcome in enumerate(attacker_dice_outcome):
                     if att_outcome > defender_dice_outcome[i]:
                         sea_area.trireme[adversary.unique_id] -= 1
+                        intra_parity = False
                         print('Defender lose one trireme')
                     elif att_outcome < defender_dice_outcome[i]:
                         sea_area.trireme[self.unique_id] -= 1
                         n_attacker_trireme -= 1
+                        intra_parity = False
                         print('Attacker lose one trireme')
                     else:
-                        parity = True
+                        intra_parity = intra_parity and True
+                        print('No one loses trireme')
+            parity = intra_parity
+
             if n_attacker_trireme == 0:
                 print('Attacker lost the battle!')
             elif sea_area.trireme[adversary.unique_id] == 0:
@@ -150,9 +159,18 @@ class Player(Agent):
             defender_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, ground_area_to.armies))], reverse=True)
             print('Player ' + str(ground_area_to.owner.unique_id) + ' defends with ' + str(min(3, ground_area_to.armies)) + ' armies. Maximux armies: ' + str(ground_area_to.armies))        
             print('Attacker outcome: ', attacker_dice_outcome)
-            print('Defender outcome; ', defender_dice_outcome)
-            # outcome = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
-            if len(attacker_dice_outcome) > len(defender_dice_outcome):
+            print('Defender outcome: ', defender_dice_outcome)
+            outcomes = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
+            for outcome in outcomes:
+                if outcome:
+                    ground_area_to.armies -= 1
+                    print('Defender lose one army')
+                else:
+                    ground_area_from.armies -= 1
+                    n_attacker_armies -= 1
+                    print('Attacker lose one army')
+
+            """ if len(attacker_dice_outcome) > len(defender_dice_outcome):
                 for i, def_outcome in enumerate(defender_dice_outcome):
                     if attacker_dice_outcome[i] > def_outcome:
                         ground_area_to.armies -= 1
@@ -169,7 +187,7 @@ class Player(Agent):
                     else:
                         ground_area_from.armies -= 1
                         n_attacker_armies -= 1
-                        print('Attacker lose one armies')
+                        print('Attacker lose one armies') """
             
         if ground_area_to.armies == 0:
             print('Defender has lost the area!')
