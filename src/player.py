@@ -101,32 +101,43 @@ class Player(Agent):
         sea_area_from.trireme[self.unique_id] -= n_trireme
         sea_area_to.trireme[self.unique_id] += n_trireme
 
-    def naval_combact(self, sea_area: SeaArea, adversary, n_attacker_trireme, n_defender_trireme):
-        attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(n_attacker_trireme)], reverse=True)
-        defender_dice_outcome = sorted([random.randint(1,6) for _ in range(n_defender_trireme)], reverse=True)
-        print('Attacker outcome: ', attacker_dice_outcome)
-        print('Defender outcome; ', defender_dice_outcome)
-        # outcome = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
-        if len(attacker_dice_outcome) > len(defender_dice_outcome):
-            for i, def_outcome in enumerate(defender_dice_outcome):
-                if attacker_dice_outcome[i] > def_outcome:
-                    sea_area.trireme[adversary.unique_id] -= 1
-                    print('Defender lose one trireme')
-                elif attacker_dice_outcome[i] < def_outcome:
-                    sea_area.trireme[self.unique_id] -= 1
-                    print('Attacker lose one trireme')
-                else:
-                    print('No one loses trireme')
-        else:
-            for i, att_outcome in enumerate(attacker_dice_outcome):
-                if att_outcome > defender_dice_outcome[i]:
-                    sea_area.trireme[adversary.unique_id] -= 1
-                    print('Defender lose one trireme')
-                elif att_outcome < defender_dice_outcome[i]:
-                    sea_area.trireme[self.unique_id] -= 1
-                    print('Attacker lose one trireme')
-                else:
-                    print('No one loses trireme')
+    def naval_combact(self, sea_area: SeaArea, adversary, n_attacker_trireme):
+        parity = False
+        while n_attacker_trireme > 0 and sea_area.trireme[adversary.unique_id] > 0 and not parity:
+            attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, n_attacker_trireme))], reverse=True)
+            defender_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, sea_area.trireme[adversary.unique_id]))], reverse=True)
+            print('Player ' + str(adversary.unique_id) + ' defends with ' + str(min(3, sea_area.trireme[adversary.unique_id])) + ' trireme')
+            print('Attacker outcome: ', attacker_dice_outcome)
+            print('Defender outcome; ', defender_dice_outcome)
+            # outcome = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
+            if len(attacker_dice_outcome) > len(defender_dice_outcome):
+                for i, def_outcome in enumerate(defender_dice_outcome):
+                    if attacker_dice_outcome[i] > def_outcome:
+                        sea_area.trireme[adversary.unique_id] -= 1
+                        print('Defender lose one trireme')
+                    elif attacker_dice_outcome[i] < def_outcome:
+                        sea_area.trireme[self.unique_id] -= 1
+                        n_attacker_trireme -= 1
+                        print('Attacker lose one trireme')
+                    else:
+                        parity = True
+            else:
+                for i, att_outcome in enumerate(attacker_dice_outcome):
+                    if att_outcome > defender_dice_outcome[i]:
+                        sea_area.trireme[adversary.unique_id] -= 1
+                        print('Defender lose one trireme')
+                    elif att_outcome < defender_dice_outcome[i]:
+                        sea_area.trireme[self.unique_id] -= 1
+                        n_attacker_trireme -= 1
+                        print('Attacker lose one trireme')
+                    else:
+                        parity = True
+            if n_attacker_trireme == 0:
+                print('Attacker lost the battle!')
+            elif sea_area.trireme[adversary.unique_id] == 0:
+                print('Defender lost all of his trireme and lost the battle!')
+            elif parity:
+                print('No one loses trireme. Combact done!')
     
     def combact_by_sea(
         self, 

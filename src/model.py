@@ -262,15 +262,15 @@ class SPQRisiko(Model):
                 adversary = random.randint(0, len(possible_adversaries) - 1)
                 adversary = self.players[possible_adversaries[adversary]]
                 # Randomly select how many attack and defense trireme
-                n_attack_trireme = random.randint(1, sea_area.trireme[player.unique_id] if sea_area.trireme[player.unique_id] <= 3 else 3)
+                n_attacker_trireme = random.randint(1, sea_area.trireme[player.unique_id])
                 # The defender must always use the maximux number of armies to defend itself
-                n_defense_trireme = sea_area.trireme[adversary.unique_id] if sea_area.trireme[adversary.unique_id] <= 3 else 3
+                # n_defense_trireme = sea_area.trireme[adversary.unique_id] if sea_area.trireme[adversary.unique_id] <= 3 else 3
                 # Let's combact biatch!!
                 print('Start battle!')
+                print('Trireme in ' + sea_area.name + ': ', sea_area.trireme)
                 print('Player ' + str(player.unique_id) + ' attacks Player ' + str(adversary.unique_id) + ' on ' + sea_area.name)
-                print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attack_trireme) + ' trireme')
-                print('Player ' + str(adversary.unique_id) + ' defends with ' + str(n_defense_trireme) + ' trireme')
-                player.naval_combact(sea_area, adversary, n_attack_trireme, n_defense_trireme)
+                print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attacker_trireme) + ' trireme')
+                player.naval_combact(sea_area, adversary, n_attacker_trireme)
 
             # 5) Attacchi via mare
             print('\n\nCOMBACT BY SEA!!')
@@ -298,13 +298,13 @@ class SPQRisiko(Model):
                 if attackable_ground_area[0].armies > 1 and not attackable_ground_area[1].already_attacked_by_sea:
                     attackable_ground_area[1].already_attacked_by_sea = True
                     # Randomly select how many attack and defense trireme
-                    n_attack_armies = random.randint(1, attackable_ground_area[0].armies - 1)
+                    n_attacker_armies = random.randint(1, attackable_ground_area[0].armies - 1)
                     # The defender must always use the maximux number of armies to defend itself
                     # n_defense_armies = attackable_ground_area[1].armies if attackable_ground_area[1].armies <= 3 else 3   
                     print('Start battle!')
                     print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
-                    print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attack_armies) + ' armies. Maximux armies: ' + str(attackable_ground_area[0].armies))
-                    attackable_ground_area = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attack_armies)
+                    print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attacker_armies) + ' armies. Maximux armies: ' + str(attackable_ground_area[0].armies))
+                    attackable_ground_area = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
 
             # 6) Attacchi terrestri
 
