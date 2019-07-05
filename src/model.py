@@ -141,7 +141,8 @@ class SPQRisiko(Model):
             if len(self.trashed_cards) == 0:
                 # We finished cards, players must do some tris to refill deck!
                 return None
-            self.deck.extend(self.thrashed_cards)
+            self.deck.extend(self.trashed_cards)
+            self.trashed_cards = []
 
         # return last card from deck
         return self.deck.pop()
@@ -154,12 +155,12 @@ class SPQRisiko(Model):
         cards_in_tris = set([card["type"] for card in cards])
         # assert len(cards_in_tris) == 3 or len(cards_in_tris) == 1, \
         #     "Tris must be composed of three different cards or three of the same type"
-        if len(cards_in_tris) != 3 or len(cards_in_tris) != 1:
+        if len(cards_in_tris) != 3 and len(cards_in_tris) != 1:
             return None
         reinforces = {
             "legionaries": 8 if len(cards_in_tris) == 1 else 10,
             "centers": 0,
-            "trireme": 0
+            "triremes": 0
         }
         for card in cards:
             for key, value in card["adds_on_tris"].items():
@@ -174,21 +175,24 @@ class SPQRisiko(Model):
         # Get all possible reinforces combination from tris from cards
         all_tris = [list(t) for t in itertools.combinations(cards, 3)]
         all_reinforces = [SPQRisiko.reinforces_from_tris(tris) for tris in all_tris]
+
         # Remove None from list
+        real_tris = [all_tris[i] for i in range(len(all_reinforces)) if all_reinforces[i]]
         all_reinforces = [i for i in all_reinforces if i]
         if len(all_reinforces) == 0:
             return None
-        quantify_reinforces = [1*r["legionaries"] + 2*r["trireme"] + 3*r["centers"] for r in all_reinforces]
-        best_tris = all_tris[quantify_reinforces.index(max(quantify_reinforces))]
+        # TODO: change 1,2,3 multiplier based on what we think it is better
+        quantify_reinforces = [1*r["legionaries"] + 2*r["triremes"] + 3*r["centers"] for r in all_reinforces if r]
+        index = quantify_reinforces.index(max(quantify_reinforces))
+        best_tris = real_tris[index]
         return best_tris
 
     def play_tris(self, tris, player):
         reinforces = self.reinforces_from_tris(tris)
         # remove cards from player and put in trash deck
-        for card_type in tris:
-            self.trashed_cards.append(player.cards.pop([i for i, card in enumerate(player.cards)
-                                                        if card["type"] == card_type][0]))
-        print(self.trashed_cards)
+        for card in tris:
+            card = player.cards.pop([i for i, n in enumerate(player.cards) if n["type"] == card["type"]][0])
+            self.trashed_cards.append(card)
         return reinforces
 
     def count_players_sea_areas(self):
@@ -257,7 +261,10 @@ class SPQRisiko(Model):
         return max_player, won
 
     def put_reinforces(self, player, armies, reinforce_type="legionaries"):
-        if reinforce_type == "triremes":
+        if isinstance(armies, dict):
+            for key, value in armies.items():
+                self.put_reinforces(player, value, key)
+        elif reinforce_type == "triremes":
             territories = self.get_territories_by_player(player, "sea")
             random_territory = self.random.randint(0, len(territories) - 1)
             territories[random_territory].trireme[self.players.index(player)] += armies
@@ -296,17 +303,13 @@ class SPQRisiko(Model):
             self.put_reinforces(player, player.get_ground_reinforces(territories))
             # player.sacrifice_trireme(sea_area_from, ground_area_to)
 
-            # TODO
             # use card combination
             # displace ground, naval and/or power places on the ground
             tris = self.get_best_tris(player.cards)
 
-            if tris is not None:
-                print(player.cards)
-                print(tris)
+            if tris:
                 reinforces = self.play_tris(tris, player)
-                print(player.cards)
-                # self.put_reinforces(player, player.get_ground_reinforces(territories))
+                self.put_reinforces(player, reinforces)
 
             # 3) Movimento navale
             # player.naval_movement(sea_area_from, sea_area_to, n_trireme)
@@ -420,8 +423,9 @@ class SPQRisiko(Model):
             # 8) Presa della carta
             # Il giocatore può dimenticarsi di pescare la carta ahah sarebbe bello fare i giocatori smemorati
             if can_draw and random.random() <= .75:
-                print("{} can draw".format(player.unique_id))
-                player.cards.append(self.draw_a_card())
+                card = self.draw_a_card()
+                if card:
+                    player.cards.append(card)
 
         self.schedule.step()
         self.datacollector.collect(self)
