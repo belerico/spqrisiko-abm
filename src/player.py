@@ -152,7 +152,7 @@ class Player(Agent):
         elif parity:
             print('No one loses trireme. Combact done!')
     
-    def combact_by_sea(
+    def ground_combact(
         self, 
         ground_area_from:GroundArea,
         ground_area_to: GroundArea,
@@ -199,9 +199,9 @@ class Player(Agent):
             print('Attacker must attack with a number of trireme that are greater or equal to the number of defender\'s trireme. Combact done!')
         elif ground_area_to.armies == 0:
             print('Defender has lost the area!')
-            ground_area_from.armies -= n_attacker_armies
+            ground_area_from.armies -= min(3, n_attacker_armies)
             ground_area_to.owner = ground_area_from.owner
-            ground_area_to.armies = n_attacker_armies
+            ground_area_to.armies = min(3, n_attacker_armies)
             conquered = True
         elif n_attacker_armies == 0:
             print('Attacker lost the battle!')
