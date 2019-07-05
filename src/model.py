@@ -38,12 +38,15 @@ class SPQRisiko(Model):
         # Initialize map
         self.G, self.territories_dict = self.create_graph_map()
         self.grid = NetworkGrid(self.G)
+        self.datacollector = DataCollector(model_reporters={
+                                              "Armies": get_n_armies_by_player
+                                            },
+                                           agent_reporters={})
         # Schedule
         self.schedule = RandomActivation(self)
         # Subgraphs
         self.ground_areas = []
         self.sea_areas = []
-
 
         territories = list(range(45))
         random.shuffle(territories)
@@ -84,6 +87,9 @@ class SPQRisiko(Model):
             t.trireme = [random.randint(0, 5) for _ in range(self.n_players)]
             self.grid.place_agent(t, node)
             self.sea_areas.append(self.grid.get_cell_list_contents([node])[0])
+
+        self.running = True
+        self.datacollector.collect(self)
 
 
     @staticmethod
@@ -367,13 +373,22 @@ class SPQRisiko(Model):
             # 8) Presa della carta
             # Il giocatore può dimenticarsi di pescare la carta ahah sarebbe bello fare i giocatori smemorati
             if can_draw:
-                print("{} can draw".format(player.unique_id))
                 player.cards.append(self.draw_a_card())
 
         self.schedule.step()
+        self.datacollector.collect(self)
         return False
 
     def run_model(self, n):
         for i in range(n):
-            if self.step():
-                break
+            self.step()
+
+
+def get_n_armies_by_player(model, player=None):
+    if player is not None:
+        return sum([t.armies for t in model.get_territories_by_player(player)])
+    else:
+        sum_a = 0
+        for player in model.players:
+            sum_a += sum([t.armies for t in model.get_territories_by_player(player)])
+        return sum_a / len(model.players)
