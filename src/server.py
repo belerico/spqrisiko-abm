@@ -1,6 +1,6 @@
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
-from mesa.visualization.modules import NetworkModule, ChartModule
+from mesa.visualization.modules import NetworkModule, ChartModule, BarChartModule
 import os
 from .model import SPQRisiko
 from .territory import GroundArea, SeaArea
@@ -61,7 +61,8 @@ def network_portrayal(G):
 
 
 network = NetworkModule(network_portrayal, 500, 889, canvas_background="/assets/images/map889x500.jpg", library='d3')
-armies_line = ChartModule([{"Label": "Armies", "Color": "Black"}])
+armies_line = ChartModule([{"Label": "Armies", "Color": "Black"}, {"Label": "Cards", "Color": "Red"}, {"Label": "Trash", "Color": "Green"}])
+# cards_bar = BarChartModule([{"Label": "PlayerCards", "Color": "Black"}], scope="agent")
 
 model_params = {
     'n_players': UserSettableParameter('slider', 'Number of players', 4, 3, 5, 1,

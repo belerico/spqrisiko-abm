@@ -30,10 +30,10 @@ class Player(Agent):
             sea_areas_per_players: list,
             power_places: list):
 
-        print('cc_lengths: ', cc_lengths)
-        print('territories_per_players: ', territories_per_players)
-        print('sea_areas_per_players', sea_areas_per_players)
-        print('power_places: ', power_places)
+        # print('cc_lengths: ', cc_lengths)
+        # print('territories_per_players: ', territories_per_players)
+        # print('sea_areas_per_players', sea_areas_per_players)
+        # print('power_places: ', power_places)
 
         m = max(cc_lengths)
         players_max_empire = [

@@ -128,7 +128,7 @@
         "mesa": {
             "editable": true,
             "git": "https://github.com/sgametrio/mesa.git",
-            "ref": "c8ffb43abb4ed4290ece9300e75522f6cc6f10e0"
+            "ref": "25c8ce867c4f90af53a0481d601bd0f9de8bf147"
         },
         "networkx": {
             "hashes": [
