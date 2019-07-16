@@ -80,8 +80,8 @@ class Player(Agent):
         return ground_reinforces
 
     def update_ground_reinforces_power_places(self):
-        for territory in self.model.territories_dict['territories']:
-            territory = self.model.grid.get_cell_list_contents([territory['id']])[0]
+        for territory in self.model.ground_areas:
+            # territory = self.model.grid.get_cell_list_contents([territory['id']])[0]
             if territory.owner == self.unique_id and territory.power_place:
                 territory.armies += 1
 

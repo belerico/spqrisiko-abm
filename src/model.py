@@ -174,7 +174,7 @@ class SPQRisiko(Model):
         best_tris = None
         # Get all possible reinforces combination from tris from cards
         all_tris = [list(t) for t in itertools.combinations(cards, 3)]
-        all_reinforces = [SPQRisiko.reinforces_from_tris(tris) for tris in all_tris]
+        all_reinforces = [self.reinforces_from_tris(tris) for tris in all_tris]
 
         # Remove None from list
         real_tris = [all_tris[i] for i in range(len(all_reinforces)) if all_reinforces[i]]
@@ -266,15 +266,20 @@ class SPQRisiko(Model):
                 self.put_reinforces(player, value, key)
         elif reinforce_type == "triremes":
             territories = self.get_territories_by_player(player, "sea")
-            random_territory = self.random.randint(0, len(territories) - 1)
-            territories[random_territory].trireme[self.players.index(player)] += armies
+            if len(territories) > 0:
+                random_territory = self.random.randint(0, len(territories) - 1)
+                territories[random_territory].trireme[self.players.index(player)] += armies
+                print('Player ' + str(player.unique_id) + ' gets ' + str(armies) + ' triremes')
         else:
             territories = self.get_territories_by_player(player, "ground")
-            random_territory = self.random.randint(0, len(territories) - 1)
-            if reinforce_type == "legionaries":
-                territories[random_territory].armies += armies
-            else:
-                territories[random_territory].power_place = True
+            if len(territories) > 0:
+                random_territory = self.random.randint(0, len(territories) - 1)
+                if reinforce_type == "legionaries":
+                    territories[random_territory].armies += armies
+                    print('Player ' + str(player.unique_id) + ' gets ' + str(armies) + ' legionaries')
+                else:
+                    territories[random_territory].power_place = True
+                    print('Player ' + str(player.unique_id) + ' gets a power place')
 
     def get_territories_by_player(self, player, ground_type="ground"):
         if ground_type == "ground":
@@ -299,6 +304,7 @@ class SPQRisiko(Model):
                 return True
 
             # 2) Fase dei rinforzi
+            print('\n\nREINFORCES')
             player.update_ground_reinforces_power_places()
             self.put_reinforces(player, player.get_ground_reinforces(territories))
             # player.sacrifice_trireme(sea_area_from, ground_area_to)
