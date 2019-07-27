@@ -9,17 +9,23 @@ probs = {
     '32': [2275/7776, 2611/7776, 2890/7776],
     '33': [17871/46656, 12348/46656, 10017/46656, 6420/46656]
 }
-A = 6
-D = 6
+A = 4
+D = 4
+
 absorbing_states = []
 transient_states = []
+idx_col = 0
 for i in range(0, A+1):
     for j in range(0, D+1):
-        if i == 0 or j == 0:
-            absorbing_states.append((i,j))
+        if i == 0 or j == 0 or i < j:
+            if i < j and i > 0 and j > 0:
+                absorbing_states[idx_col:idx_col] = [(i,j)]
+                idx_col += 1
+            else:
+                absorbing_states.append((i,j))
         else:
             transient_states.append((i,j))
-absorbing_states = absorbing_states[1:]
+del absorbing_states[idx_col]
 
 Q = pandas.DataFrame(
         0,
@@ -37,23 +43,25 @@ for i in range(1, A+1):
         if i >= j:
             for k, prob in enumerate(probs[str(min(3, i)) + '' + str(min(3, j))]):
                 try:
-                    Q[(i-j+k, j-k)].loc[(i,j)] = prob
+                    Q.loc[(i,j), (i-j+k, j-k)] = prob
                 except KeyError:
-                    R[(i-j+k, j-k)].loc[(i,j)] = prob
+                    R.loc[(i,j), (i-j+k, j-k)] = prob
 
-idx_col = 0
+R = R.loc[:, (R != 0).any(axis=0)]
+
+""" idx_col = 0
 for i in range(1, A+1):
     for j in range(i+1, D+1):
         state = (i,j)
-        Q.drop(state, axis=0, inplace=True)
-        R.drop(state, axis=0, inplace=True)
-        if not Q[state].isna().all():
+        #Q.drop(state, axis=0, inplace=True)
+        #R.drop(state, axis=0, inplace=True)
+        if not R[state].isna().all():
             col_to_move = Q[state]
             Q.drop(state, axis=1, inplace=True)
             R.insert(loc=idx_col, column=state, value=col_to_move)
             idx_col += 1
         else:
-            Q.drop(state, axis=1, inplace=True)
+            Q.drop(state, axis=1, inplace=True) """
 
 """ idx_col = 0
 for state in Q.columns[~Q.isna().all()].tolist():
@@ -64,9 +72,6 @@ for state in Q.columns[~Q.isna().all()].tolist():
         R.drop(state, axis=0, inplace=True)
         R.insert(loc=idx_col, column=state, value=col_to_move)
         idx_col += 1 """
-
-""" Q.fillna(0, inplace=True)
-R.fillna(0, inplace=True) """
 
 Q_mat = numpy.asmatrix(Q.to_numpy(), dtype=float)
 R_mat = numpy.asmatrix(R.to_numpy(), dtype=float)
