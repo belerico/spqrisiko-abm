@@ -174,7 +174,7 @@ class SPQRisiko(Model):
         best_tris = None
         # Get all possible reinforces combination from tris from cards
         all_tris = [list(t) for t in itertools.combinations(cards, 3)]
-        all_reinforces = [self.reinforces_from_tris(tris) for tris in all_tris]
+        all_reinforces = [SPQRisiko.reinforces_from_tris(tris) for tris in all_tris]
 
         # Remove None from list
         real_tris = [all_tris[i] for i in range(len(all_reinforces)) if all_reinforces[i]]
