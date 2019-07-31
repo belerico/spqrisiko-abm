@@ -1,3 +1,4 @@
+import sys
 import numpy
 from pandas import pandas
 
@@ -23,8 +24,8 @@ probs = {
 """
 A is the initial number of attacker's armies, while D is the defender's ones
 """
-A = 5
-D = 5
+A = 3
+D = 4
 
 """
 Compute the absorbing and transient states.
@@ -36,14 +37,16 @@ transient_states = []
 idx_col = 0
 for a in range(0, A+1):
     for d in range(0, D+1):
-        if a == 0 or d == 0 or a < d:
+        atta_dice = min(3,a)
+        defe_dice = min(3,d)
+        if atta_dice >= defe_dice and a > 0 and d > 0:
+            transient_states.append((a,d))
+        else:
             if a < d and a > 0 and d > 0:
                 absorbing_states.append((a,d))
             else:
                 absorbing_states[idx_col:idx_col] = [(a,d)]
                 idx_col += 1
-        else:
-            transient_states.append((a,d))
 # Delete the (0,0) state
 del absorbing_states[0]
 
@@ -64,12 +67,16 @@ R = pandas.DataFrame(
 # Filling those matrices with the precomputed porbabilities
 for a in range(1, A+1):
     for d in range(1, D+1):
-        if a >= d:
-            for k, prob in enumerate(probs[str(min(3, a)) + '' + str(min(3, d))]):
+        atta_dice = min(3,a)
+        defe_dice = min(3,d)
+        if atta_dice >= defe_dice:
+            min_dice = min(atta_dice, defe_dice)
+            for k, prob in enumerate(probs[str(atta_dice) + '' + str(defe_dice)]):
                 try:
-                    Q.loc[(a,d), (a-d+k, d-k)] = prob
+                    Q.loc[(a,d), (a-min_dice+k, d-k)] = prob
                 except KeyError:
-                    R.loc[(a,d), (a-d+k, d-k)] = prob
+                    R.loc[(a,d), (a-min_dice+k, d-k)] = prob
+
 """ 
 Remove all those absorbing states that contains only Oes, since they don't add
 information for the final computation
@@ -106,18 +113,22 @@ Q_mat = numpy.asmatrix(Q.to_numpy(), dtype=float)
 R_mat = numpy.asmatrix(R.to_numpy(), dtype=float)
 I = numpy.eye(N=Q_mat.shape[0], M=Q_mat.shape[1])
 F = numpy.linalg.inv(I - Q_mat) * R_mat
-probs_atta_wins = F[:, range(A, A+D)]\
+probs_atta_wins = F[:, range(D, A+D)]\
                     .sum(axis=1)\
                     .reshape((1, F.shape[0]))\
                     .tolist()[0]
 
-n = int(numpy.sqrt(len(probs_atta_wins)*2))
-idx = numpy.tril_indices(n, k=0, m=n)
-atta_wins = numpy.zeros((n,n))
-atta_wins[idx] = probs_atta_wins
+atta_wins = numpy.zeros((A,D))
+idx_probs_atta_wins = 0
+for a in range(1, A+1):
+    for d in range(1, D+1):
+        atta_dice = min(3,a)
+        defe_dice = min(3,d)
+        if atta_dice >= defe_dice:
+            atta_wins[a-1, d-1] = probs_atta_wins[idx_probs_atta_wins]
+            idx_probs_atta_wins += 1
 
 print(atta_wins, '\n')
-print(F.sum(axis=1), '\n')
 print(pandas.DataFrame(
         F,
         columns=absorbing_states,
