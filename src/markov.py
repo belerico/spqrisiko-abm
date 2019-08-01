@@ -24,7 +24,7 @@ probs = {
 """
 A is the initial number of attacker's armies, while D is the defender's ones
 """
-A = 3
+A = 7
 D = 4
 
 """
@@ -81,8 +81,10 @@ for a in range(1, A+1):
 Remove all those absorbing states that contains only Oes, since they don't add
 information for the final computation
 """
+""" 
 R = R.loc[:, (R != 0).any(axis=0)]
-absorbing_states = [state for state in absorbing_states if state in R.columns.tolist()]
+absorbing_states = [state for state in absorbing_states if state in R.columns.tolist()] 
+"""
 
 """ idx_col = 0
 for a in range(1, A+1):
@@ -111,11 +113,11 @@ for state in Q.columns[~Q.isna().all()].tolist():
 # Theoretical computation: see the main reference
 Q_mat = numpy.asmatrix(Q.to_numpy(), dtype=float)
 R_mat = numpy.asmatrix(R.to_numpy(), dtype=float)
-I = numpy.eye(N=Q_mat.shape[0], M=Q_mat.shape[1])
-F = numpy.linalg.inv(I - Q_mat) * R_mat
-probs_atta_wins = F[:, range(D, A+D)]\
+I_mat = numpy.eye(N=Q_mat.shape[0], M=Q_mat.shape[1])
+F_mat = numpy.linalg.inv(I_mat - Q_mat) * R_mat
+probs_atta_wins = F_mat[:, range(D, A+D)]\
                     .sum(axis=1)\
-                    .reshape((1, F.shape[0]))\
+                    .reshape((1, F_mat.shape[0]))\
                     .tolist()[0]
 
 atta_wins = numpy.zeros((A,D))
@@ -130,8 +132,8 @@ for a in range(1, A+1):
 
 print(atta_wins, '\n')
 print(pandas.DataFrame(
-        F,
+        F_mat,
         columns=absorbing_states,
         index=pandas.MultiIndex.from_tuples(transient_states)
     ), '\n')
-print(F[-1, :])
+print(F_mat[-1, :])
