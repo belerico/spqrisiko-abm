@@ -135,5 +135,5 @@ def get_probabilities(A: int, D: int):
     return atta_wins, (1 - atta_wins).T, F
 
 if __name__ == "__main__":
-    atta_wins, defe_wins, F = get_probabilities(6,6)
+    atta_wins, defe_wins, F = get_probabilities(1,1)
     print(atta_wins, '\n', defe_wins, '\n', F)

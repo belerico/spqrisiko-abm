@@ -2,7 +2,7 @@ import math
 import random
 import operator
 from . import constants
-# from .model import SPQRisiko
+from .markov import get_probabilities
 from .territory import GroundArea, SeaArea
 from mesa import Agent
 
@@ -24,6 +24,14 @@ class Player(Agent):
         self.cards = []
         self.strategy = strategy
         super().__init__(unique_id,  model)
+
+    def get_aggressivity(self):
+        if self.strategy == 'Aggressive':
+            return .6
+        elif self.strategy == 'Neutral':
+            return .7
+        else:
+            return .8
 
     def update_victory_points(
             self, 
@@ -161,8 +169,14 @@ class Player(Agent):
         n_attacker_armies):
 
         conquered = False
-
-        while min(3, n_attacker_armies) >= min(3, ground_area_to.armies) and n_attacker_armies > 0 and ground_area_to.armies > 0:
+        aggressivity = self.get_aggressivity()
+        print(n_attacker_armies, ground_area_to.armies)
+        atta_wins, _, _ = get_probabilities(n_attacker_armies, ground_area_to.armies)
+        while min(3, n_attacker_armies) >= min(3, ground_area_to.armies) and \
+                atta_wins[n_attacker_armies - 1, ground_area_to.armies - 1] >= aggressivity and \
+                n_attacker_armies > 0 and \
+                ground_area_to.armies > 0:
+            
             attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, n_attacker_armies))], reverse=True)
             defender_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, ground_area_to.armies))], reverse=True)
             print('Player ' + str(ground_area_to.owner.unique_id) + ' defends with ' + str(min(3, ground_area_to.armies)) + ' armies. Maximux armies: ' + str(ground_area_to.armies))        
@@ -197,16 +211,16 @@ class Player(Agent):
                         n_attacker_armies -= 1
                         print('Attacker lose one armies') """
 
+        if atta_wins[n_attacker_armies - 1, ground_area_to.armies - 1] < aggressivity:
+            print('The attacker has a probability of ' + str(atta_wins[n_attacker_armies - 1, ground_area_to.armies - 1]) + ', and is less than ' + str(aggressivity))
+        if n_attacker_armies == 0:
+            print('Attacker lost the battle!')
         if min(3, n_attacker_armies) < min(3, ground_area_to.armies):
             print('Attacker must attack with a number of trireme that are greater or equal to the number of defender\'s trireme. Combact done!')
-        elif ground_area_to.armies == 0:
+        if ground_area_to.armies == 0:
             print('Defender has lost the area!')
-            ground_area_from.armies -= min(3, n_attacker_armies)
             ground_area_to.owner = ground_area_from.owner
-            ground_area_to.armies = min(3, n_attacker_armies)
             conquered = True
-        elif n_attacker_armies == 0:
-            print('Attacker lost the battle!')
 
         """ if ground_area_to.armies == 0:
             print('Defender has lost the area!')
@@ -242,4 +256,4 @@ class Player(Agent):
             else:
                 print('Attacker lost the battle!') """
 
-        return [ground_area_from, ground_area_to], conquered
+        return [ground_area_from, ground_area_to], conquered, min(3, n_attacker_armies)
