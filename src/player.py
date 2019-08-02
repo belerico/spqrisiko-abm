@@ -11,7 +11,8 @@ class Player(Agent):
     def __init__(
         self, 
         unique_id, 
-        computer, 
+        computer,
+        strategy,
         model):
 
         # computer: boolean, human or artificial player
@@ -21,6 +22,7 @@ class Player(Agent):
         self.color = constants.COLORS[unique_id %
                                       constants.MAX_PLAYERS]  # one color per id
         self.cards = []
+        self.strategy = strategy
         super().__init__(unique_id,  model)
 
     def update_victory_points(

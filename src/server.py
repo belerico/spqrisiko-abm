@@ -69,6 +69,8 @@ model_params = {
                                        description='Choose how many players should play the game'),
     'points_limit': UserSettableParameter('slider', 'Points limit', 50, 50, 500, 5,
                                        description='How many points should a player reach to win the war?'),
+    'strategy': UserSettableParameter('choice', "Which strategy should players play?",
+                                          value="Random", choices=["Aggressive", "Defensive", "Neutral", "Random"])
 }
 
 server = ModularServer(SPQRisiko, [network, armies_line], 'S.P.Q.Risiko',

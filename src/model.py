@@ -19,17 +19,17 @@ from mesa.space import NetworkGrid
 class SPQRisiko(Model):
     """A SPQRisiko model with some number of players"""
 
-    def __init__(self, n_players, points_limit):
+    def __init__(self, n_players, points_limit, strategy):
         super().__init__()
         # How many agent players wiil be
         self.n_players = n_players if n_players <= constants.MAX_PLAYERS else constants.MAX_PLAYERS
         # How many computer players will be
         self.n_computers = constants.MAX_PLAYERS - n_players
         # Creation of player and computer agents
-        self.players = [Player(i, computer=False, model=self)
+        self.players = [Player(i, computer=False, strategy=self.get_strategy_setup(strategy), model=self)
                         for i in range(self.n_players)]
         self.computers = [
-            Player(i, computer=True, model=self)
+            Player(i, computer=True, strategy="Neutral", model=self)
             for i in range(self.n_players, self.n_players + self.n_computers)]
         self.points_limit = points_limit  # limit at which one player wins
         self.deck = self.create_deck()
@@ -95,6 +95,11 @@ class SPQRisiko(Model):
         self.running = True
         self.datacollector.collect(self)
 
+    def get_strategy_setup(self, strategy):
+        strategies = ["Aggressive", "Passive", "Neutral"]
+        if strategy == "Random":
+            strategy = self.random.choice(strategies)
+        return strategy
 
     @staticmethod
     def create_graph_map():
