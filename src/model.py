@@ -1,4 +1,5 @@
 import os
+import math
 import json
 import networkx as nx
 import random
@@ -398,8 +399,18 @@ class SPQRisiko(Model):
                     print('Start battle!')
                     print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
                     print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attacker_armies) + ' armies. Maximux armies: ' + str(attackable_ground_area[0].armies))
-                    attackable_ground_area, conquered = player.ground_combact(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
+                    attackable_ground_area, conquered, n_attacker_armies, last_attack_armies = player.ground_combact(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
                     if conquered:
+                        if player.strategy == 'Aggressive':
+                            armies_to_move = n_attacker_armies
+                        elif player.strategy == 'Passive':
+                            armies_to_move = last_attack_armies
+                        else:
+                            armies_to_move = math.floor((n_attacker_armies - last_attack_armies) / 2)
+                        attackable_ground_area[0].armies -= armies_to_move
+                        attackable_ground_area[1].armies += armies_to_move
+                        # TODO
+                        # Calcolare i nuovi territori da attaccare a partire dal territorio appena conquistato
                         can_draw = True
 
             # 6) Attacchi terrestri
@@ -424,8 +435,18 @@ class SPQRisiko(Model):
                     print('Start battle!')
                     print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
                     print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attacker_armies) + ' armies. Maximux armies: ' + str(attackable_ground_area[0].armies))
-                    attackable_ground_area, conquered = player.ground_combact(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
+                    attackable_ground_area, conquered, n_attacker_armies, last_attack_armies = player.ground_combact(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
                     if conquered:
+                        if player.strategy == 'Aggressive':
+                            armies_to_move = n_attacker_armies
+                        elif player.strategy == 'Passive':
+                            armies_to_move = last_attack_armies
+                        else:
+                            armies_to_move = math.floor((n_attacker_armies - last_attack_armies) / 2)
+                        attackable_ground_area[0].armies -= armies_to_move
+                        attackable_ground_area[1].armies += armies_to_move
+                        # TODO
+                        # Calcolare i nuovi territori da attaccare a partire dal territorio appena conquistato
                         can_draw = True
 
 

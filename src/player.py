@@ -192,25 +192,6 @@ class Player(Agent):
                     n_attacker_armies -= 1
                     print('Attacker lose one army')
 
-            """ if len(attacker_dice_outcome) > len(defender_dice_outcome):
-                for i, def_outcome in enumerate(defender_dice_outcome):
-                    if attacker_dice_outcome[i] > def_outcome:
-                        ground_area_to.armies -= 1
-                        print('Defender lose one armies')
-                    else:
-                        ground_area_from.armies -= 1
-                        n_attacker_armies -= 1
-                        print('Attacker lose one armies')
-            else:
-                for i, att_outcome in enumerate(attacker_dice_outcome):
-                    if att_outcome > defender_dice_outcome[i]:
-                        ground_area_to.armies -= 1
-                        print('Defender lose one armies')
-                    else:
-                        ground_area_from.armies -= 1
-                        n_attacker_armies -= 1
-                        print('Attacker lose one armies') """
-
         if atta_wins[n_attacker_armies - 1, ground_area_to.armies - 1] < aggressivity:
             print('The attacker has a probability of ' + str(atta_wins[n_attacker_armies - 1, ground_area_to.armies - 1]) + ', and is less than ' + str(aggressivity))
         if n_attacker_armies == 0:
@@ -222,38 +203,4 @@ class Player(Agent):
             ground_area_to.owner = ground_area_from.owner
             conquered = True
 
-        """ if ground_area_to.armies == 0:
-            print('Defender has lost the area!')
-            ground_area_to.owner = ground_area_from.owner
-            ground_area_to.armies = n_attacker_armies - 3
-        elif n_attacker_armies - 3 < 0:
-            print('Attacker has only ' + str(n_attacker_armies) + ' left! Last attack!')
-            attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(n_attacker_armies)], reverse=True)
-            defender_dice_outcome = sorted([random.randint(1,6) for _ in range(n_defender_armies)], reverse=True)
-            print('Attacker outcome: ', attacker_dice_outcome)
-            print('Defender outcome; ', defender_dice_outcome)
-            # outcome = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
-            if len(attacker_dice_outcome) > len(defender_dice_outcome):
-                for i, def_outcome in enumerate(defender_dice_outcome):
-                    if attacker_dice_outcome[i] > def_outcome:
-                        ground_area_to.armies -= 1
-                        print('Defender lose one armies')
-                    else:
-                        ground_area_from.armies -= 1
-                        print('Attacker lose one armies')
-            else:
-                for i, att_outcome in enumerate(attacker_dice_outcome):
-                    if att_outcome > defender_dice_outcome[i]:
-                        ground_area_to.armies -= 1
-                        print('Defender lose one armies')
-                    else:
-                        ground_area_from.armies -= 1
-                        print('Attacker lose one armies')
-            if ground_area_to.armies == 0:
-                print('Defender has lost the area!')
-                ground_area_to.owner = ground_area_from.owner
-                ground_area_to.armies = n_attacker_armies
-            else:
-                print('Attacker lost the battle!') """
-
-        return [ground_area_from, ground_area_to], conquered, min(3, n_attacker_armies)
+        return [ground_area_from, ground_area_to], conquered, n_attacker_armies, min(3, n_attacker_armies)
