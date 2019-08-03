@@ -2,7 +2,7 @@ import math
 import random
 import operator
 from . import constants
-from .markov import get_probabilities
+from .markov import get_probabilities_ground_combact
 from .territory import GroundArea, SeaArea
 from mesa import Agent
 
@@ -162,16 +162,53 @@ class Player(Agent):
         elif parity:
             print('No one loses trireme. Combact done!')
     
+    def combact_by_sea(
+        self, 
+        ground_area_from:GroundArea,
+        ground_area_to: GroundArea,
+        n_attacker_armies: int):
+
+        conquered = False
+
+        while n_attacker_armies > 0 and ground_area_to.armies > 0:
+            
+            attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, n_attacker_armies))], reverse=True)
+            defender_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, ground_area_to.armies))], reverse=True)
+
+            print('Player ' + str(self.unique_id) + ' attacks with ' + str(n_attacker_armies) + ' armies. Maximux armies: ' + str(ground_area_from.armies))
+            print('Player ' + str(ground_area_to.owner.unique_id) + ' defends with ' + str(ground_area_to.armies) + ' armies.')
+            print('Attacker outcome: ', attacker_dice_outcome)
+            print('Defender outcome: ', defender_dice_outcome)
+            
+            outcomes = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
+            for outcome in outcomes:
+                if outcome:
+                    ground_area_to.armies -= 1
+                    print('Defender lose one army')
+                else:
+                    ground_area_from.armies -= 1
+                    n_attacker_armies -= 1
+                    print('Attacker lose one army')
+
+        if n_attacker_armies <= 0:
+            print('Attacker lost the battle!')
+        if ground_area_to.armies <= 0:
+            print('Defender has lost the area!')
+            ground_area_to.owner = ground_area_from.owner
+            conquered = True
+
+        return conquered, n_attacker_armies, min(3, n_attacker_armies)
+
     def ground_combact(
         self, 
         ground_area_from:GroundArea,
         ground_area_to: GroundArea,
-        n_attacker_armies):
+        n_attacker_armies: int,
+        atta_wins):
 
         conquered = False
         aggressivity = self.get_aggressivity()
-        print(n_attacker_armies, ground_area_to.armies)
-        atta_wins, _, _ = get_probabilities(n_attacker_armies, ground_area_to.armies)
+
         while min(3, n_attacker_armies) >= min(3, ground_area_to.armies) and \
                 atta_wins[n_attacker_armies - 1, ground_area_to.armies - 1] >= aggressivity and \
                 n_attacker_armies > 0 and \
@@ -179,9 +216,12 @@ class Player(Agent):
             
             attacker_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, n_attacker_armies))], reverse=True)
             defender_dice_outcome = sorted([random.randint(1,6) for _ in range(min(3, ground_area_to.armies))], reverse=True)
-            print('Player ' + str(ground_area_to.owner.unique_id) + ' defends with ' + str(min(3, ground_area_to.armies)) + ' armies. Maximux armies: ' + str(ground_area_to.armies))        
+
+            print('Player ' + str(self.unique_id) + ' attacks with ' + str(n_attacker_armies) + ' armies. Maximux armies: ' + str(ground_area_from.armies))
+            print('Player ' + str(ground_area_to.owner.unique_id) + ' defends with ' + str(ground_area_to.armies) + ' armies.')
             print('Attacker outcome: ', attacker_dice_outcome)
             print('Defender outcome: ', defender_dice_outcome)
+            
             outcomes = list(map(operator.gt, attacker_dice_outcome, defender_dice_outcome))
             for outcome in outcomes:
                 if outcome:
@@ -194,13 +234,13 @@ class Player(Agent):
 
         if atta_wins[n_attacker_armies - 1, ground_area_to.armies - 1] < aggressivity:
             print('The attacker has a probability of ' + str(atta_wins[n_attacker_armies - 1, ground_area_to.armies - 1]) + ', and is less than ' + str(aggressivity))
-        if n_attacker_armies == 0:
+        if n_attacker_armies <= 0:
             print('Attacker lost the battle!')
         if min(3, n_attacker_armies) < min(3, ground_area_to.armies):
             print('Attacker must attack with a number of trireme that are greater or equal to the number of defender\'s trireme. Combact done!')
-        if ground_area_to.armies == 0:
+        if ground_area_to.armies <= 0:
             print('Defender has lost the area!')
             ground_area_to.owner = ground_area_from.owner
             conquered = True
 
-        return [ground_area_from, ground_area_to], conquered, n_attacker_armies, min(3, n_attacker_armies)
+        return conquered, n_attacker_armies, min(3, n_attacker_armies)
