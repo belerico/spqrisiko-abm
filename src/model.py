@@ -6,6 +6,7 @@ import random
 import collections, itertools
 
 from . import constants
+from .markov import get_probabilities_ground_combact, get_probabilities_combact_by_sea
 from .territory import GroundArea, SeaArea
 from .player import Player
 
@@ -294,6 +295,8 @@ class SPQRisiko(Model):
             return [t for t in self.sea_areas if t.trireme[self.players.index(player)] > 0]
 
     def step(self):
+        atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(10, 10)
+        atta_wins_combact_by_sea, _, _ = get_probabilities_combact_by_sea(10, 10)
         for player in self.players:
             can_draw = False
             territories, power_places = self.count_players_territories_power_places()
@@ -379,39 +382,62 @@ class SPQRisiko(Model):
                         # if the current player posess a number of trireme that permits him
                         # to attack at least another player
                         if isinstance(neighbor, SeaArea) and neighbor.trireme[player.unique_id] > min(neighbor.trireme):
-                            print('Trireme in ' + neighbor.name + ': ', neighbor.trireme)
+                            # print('Trireme in ' + neighbor.name + ': ', neighbor.trireme)
                             for sea_area_neighbor in self.grid.get_neighbors(neighbor.unique_id):
                                 sea_area_neighbor = self.grid.get_cell_list_contents([sea_area_neighbor])[0]
                                 if isinstance(sea_area_neighbor, GroundArea) and \
                                     ground_area.unique_id != sea_area_neighbor.unique_id and \
                                     sea_area_neighbor.owner.unique_id != player.unique_id and \
-                                    (sea_area_neighbor.owner.computer or neighbor.trireme[player.unique_id] > neighbor.trireme[sea_area_neighbor.owner.unique_id]) and \
-                                    ground_area.armies - 1 >= min(3, sea_area_neighbor.armies):
-
-                                    attackable_ground_areas.append([ground_area, sea_area_neighbor])
+                                    (sea_area_neighbor.owner.computer or neighbor.trireme[player.unique_id] > neighbor.trireme[sea_area_neighbor.owner.unique_id]):
+                                    
+                                    has_enemies = False
+                                    ground_area_neighbors = self.grid.get_neighbors(ground_area.unique_id)
+                                    for ground_area_neighbor in ground_area_neighbors:
+                                        ground_area_neighbor = self.grid.get_cell_list_contents([ground_area_neighbor])[0]
+                                        if isinstance(ground_area_neighbor, GroundArea) and ground_area_neighbor.owner.unique_id != ground_area.owner.unique_id:
+                                            has_enemies = True
+                                            break
+                                    if has_enemies and ground_area.armies - 2 >= min(3, sea_area_neighbor.armies):
+                                        attackable_ground_areas.append([ground_area, sea_area_neighbor, 2])
+                                    elif not has_enemies and ground_area.armies - 1 >= min(3, sea_area_neighbor.armies):
+                                        attackable_ground_areas.append([ground_area, sea_area_neighbor, 1])
 
             for attackable_ground_area in attackable_ground_areas:
-                if attackable_ground_area[0].armies > 1 and not attackable_ground_area[1].already_attacked_by_sea:
+                if attackable_ground_area[0].armies - attackable_ground_area[2] > attackable_ground_area[2] and not attackable_ground_area[1].already_attacked_by_sea:
                     attackable_ground_area[1].already_attacked_by_sea = True
-                    # Randomly select how many attack and defense trireme
-                    n_attacker_armies = attackable_ground_area[0].armies - 1
+
+                    # Attacker always attacks with the maximum number of armies
                     # The defender must always use the maximux number of armies to defend itself
+                    n_attacker_armies = attackable_ground_area[0].armies - attackable_ground_area[2]
+
+                    # Check if the atta_wins_combact_by_sea probabilities matrix needs to be recomputed
+                    if n_attacker_armies > atta_wins_combact_by_sea.shape[0]:
+                        atta_wins_combact_by_sea, _, _ = get_probabilities_ground_combact(n_attacker_armies, atta_wins_combact_by_sea.shape[1])
+                    elif attackable_ground_area[1].armies > atta_wins_combact_by_sea.shape[1]:
+                        atta_wins_combact_by_sea, _, _ = get_probabilities_ground_combact(atta_wins_combact_by_sea.shape[0], attackable_ground_area[1].armies)
+                    elif n_attacker_armies > atta_wins_combact_by_sea.shape[0] and attackable_ground_area[1].armies > atta_wins_combact_by_sea.shape[1]:
+                        atta_wins_combact_by_sea, _, _ = get_probabilities_ground_combact(n_attacker_armies, attackable_ground_area[1].armies)
+                    
                     print('Start battle!')
                     print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
-                    print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attacker_armies) + ' armies. Maximux armies: ' + str(attackable_ground_area[0].armies))
-                    attackable_ground_area, conquered, n_attacker_armies, last_attack_armies = player.ground_combact(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
+                    conquered, n_attacker_armies, last_attack_armies = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
                     if conquered:
                         if player.strategy == 'Aggressive':
                             armies_to_move = n_attacker_armies
                         elif player.strategy == 'Passive':
                             armies_to_move = last_attack_armies
                         else:
-                            armies_to_move = math.floor((n_attacker_armies - last_attack_armies) / 2)
+                            armies_to_move = math.floor((n_attacker_armies + last_attack_armies) / 2)
+                            if armies_to_move == 0:
+                                armies_to_move = 1
                         attackable_ground_area[0].armies -= armies_to_move
                         attackable_ground_area[1].armies += armies_to_move
                         # TODO
                         # Calcolare i nuovi territori da attaccare a partire dal territorio appena conquistato
                         can_draw = True
+
+            for ground_area in self.ground_areas:
+                ground_area.already_attacked_by_sea = False
 
             # 6) Attacchi terrestri
             print('\n\nGROUND COMBACT!!')
@@ -422,31 +448,48 @@ class SPQRisiko(Model):
                         neighbor = self.grid.get_cell_list_contents([neighbor])[0]
                         if isinstance(neighbor, GroundArea) and \
                             neighbor.owner.unique_id != player.unique_id and \
-                            ground_area.armies - 1 >= min(3, neighbor.armies):
+                            min(3, ground_area.armies - 1) >= min(3, neighbor.armies):
                             
                             attackable_ground_areas.append([ground_area, neighbor])
             
             for attackable_ground_area in attackable_ground_areas:
                 if attackable_ground_area[0].armies > 1:
-                    attackable_ground_area[1].already_attacked_by_sea = True
-                    # Randomly select how many attack and defense trireme
-                    n_attacker_armies = attackable_ground_area[0].armies - 1
+
+                    # Attacker always attacks with the maximum number of armies
                     # The defender must always use the maximux number of armies to defend itself
+                    n_attacker_armies = attackable_ground_area[0].armies - 1
+
+                    # Check if the atta_wins_ground_combact probabilities matrix needs to be recomputed
+                    if n_attacker_armies > atta_wins_ground_combact.shape[0] and attackable_ground_area[1].armies > atta_wins_ground_combact.shape[1]:
+                        atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, attackable_ground_area[1].armies)
+                    elif n_attacker_armies > atta_wins_ground_combact.shape[0]:
+                        atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, atta_wins_ground_combact.shape[1])
+                    elif attackable_ground_area[1].armies > atta_wins_ground_combact.shape[1]:
+                        atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(atta_wins_ground_combact.shape[0], attackable_ground_area[1].armies)
+
                     print('Start battle!')
                     print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
-                    print('Player ' + str(player.unique_id) + ' attacks with ' + str(n_attacker_armies) + ' armies. Maximux armies: ' + str(attackable_ground_area[0].armies))
-                    attackable_ground_area, conquered, n_attacker_armies, last_attack_armies = player.ground_combact(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
+                    conquered, n_attacker_armies, last_attack_armies = player.ground_combact(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies, atta_wins_ground_combact)
                     if conquered:
                         if player.strategy == 'Aggressive':
                             armies_to_move = n_attacker_armies
                         elif player.strategy == 'Passive':
                             armies_to_move = last_attack_armies
                         else:
-                            armies_to_move = math.floor((n_attacker_armies - last_attack_armies) / 2)
+                            armies_to_move = math.floor((n_attacker_armies + last_attack_armies) / 2)
+                            if armies_to_move == 0:
+                                armies_to_move = 1
                         attackable_ground_area[0].armies -= armies_to_move
                         attackable_ground_area[1].armies += armies_to_move
                         # TODO
                         # Calcolare i nuovi territori da attaccare a partire dal territorio appena conquistato
+                        for neighbor in self.grid.get_neighbors(attackable_ground_area[1].unique_id):
+                            neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+                            if isinstance(neighbor, GroundArea) and \
+                                neighbor.owner.unique_id != player.unique_id and \
+                                min(3, attackable_ground_area[1].armies - 1) >= min(3, neighbor.armies):
+                                
+                                attackable_ground_areas.append([attackable_ground_area[1], neighbor])
                         can_draw = True
 
 
@@ -464,7 +507,7 @@ class SPQRisiko(Model):
         return False
 
     def run_model(self, n):
-        for i in range(n):
+        for _ in range(n):
             self.step()
 
 
