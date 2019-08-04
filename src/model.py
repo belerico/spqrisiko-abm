@@ -53,6 +53,10 @@ class SPQRisiko(Model):
         # Subgraphs
         self.ground_areas = []
         self.sea_areas = []
+        # Probabilities that the attacker wins on a ground combact
+        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(10, 10)
+        # Probabilities that the attacker wins on a combact by sea
+        self.atta_wins_combact_by_sea, _, _ = get_probabilities_combact_by_sea(10, 10)
 
         territories = list(range(45))
         random.shuffle(territories)
@@ -295,8 +299,6 @@ class SPQRisiko(Model):
             return [t for t in self.sea_areas if t.trireme[self.players.index(player)] > 0]
 
     def step(self):
-        atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(10, 10)
-        atta_wins_combact_by_sea, _, _ = get_probabilities_combact_by_sea(10, 10)
         for player in self.players:
             can_draw = False
             territories, power_places = self.count_players_territories_power_places()
@@ -410,30 +412,18 @@ class SPQRisiko(Model):
                     # The defender must always use the maximux number of armies to defend itself
                     n_attacker_armies = attackable_ground_area[0].armies - attackable_ground_area[2]
 
-                    # Check if the atta_wins_combact_by_sea probabilities matrix needs to be recomputed
-                    if n_attacker_armies > atta_wins_combact_by_sea.shape[0]:
-                        atta_wins_combact_by_sea, _, _ = get_probabilities_ground_combact(n_attacker_armies, atta_wins_combact_by_sea.shape[1])
-                    elif attackable_ground_area[1].armies > atta_wins_combact_by_sea.shape[1]:
-                        atta_wins_combact_by_sea, _, _ = get_probabilities_ground_combact(atta_wins_combact_by_sea.shape[0], attackable_ground_area[1].armies)
-                    elif n_attacker_armies > atta_wins_combact_by_sea.shape[0] and attackable_ground_area[1].armies > atta_wins_combact_by_sea.shape[1]:
-                        atta_wins_combact_by_sea, _, _ = get_probabilities_ground_combact(n_attacker_armies, attackable_ground_area[1].armies)
-                    
+                    # Check if the atta_wins_combact_by_sea probabilities matrix needs to be recomputed                   
+                    if n_attacker_armies > self.atta_wins_combact_by_sea.shape[0] and attackable_ground_area[1].armies > self.atta_wins_combact_by_sea.shape[1]:
+                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, attackable_ground_area[1].armies)
+                    elif n_attacker_armies > self.atta_wins_combact_by_sea.shape[0]:
+                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, self.atta_wins_combact_by_sea.shape[1])
+                    elif attackable_ground_area[1].armies > self.atta_wins_combact_by_sea.shape[1]:
+                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(self.atta_wins_combact_by_sea.shape[0], attackable_ground_area[1].armies)
+
                     print('Start battle!')
                     print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
-                    conquered, n_attacker_armies, last_attack_armies = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
+                    conquered = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
                     if conquered:
-                        if player.strategy == 'Aggressive':
-                            armies_to_move = n_attacker_armies
-                        elif player.strategy == 'Passive':
-                            armies_to_move = last_attack_armies
-                        else:
-                            armies_to_move = math.floor((n_attacker_armies + last_attack_armies) / 2)
-                            if armies_to_move == 0:
-                                armies_to_move = 1
-                        attackable_ground_area[0].armies -= armies_to_move
-                        attackable_ground_area[1].armies += armies_to_move
-                        # TODO
-                        # Calcolare i nuovi territori da attaccare a partire dal territorio appena conquistato
                         can_draw = True
 
             for ground_area in self.ground_areas:
@@ -460,27 +450,17 @@ class SPQRisiko(Model):
                     n_attacker_armies = attackable_ground_area[0].armies - 1
 
                     # Check if the atta_wins_ground_combact probabilities matrix needs to be recomputed
-                    if n_attacker_armies > atta_wins_ground_combact.shape[0] and attackable_ground_area[1].armies > atta_wins_ground_combact.shape[1]:
-                        atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, attackable_ground_area[1].armies)
-                    elif n_attacker_armies > atta_wins_ground_combact.shape[0]:
-                        atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, atta_wins_ground_combact.shape[1])
-                    elif attackable_ground_area[1].armies > atta_wins_ground_combact.shape[1]:
-                        atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(atta_wins_ground_combact.shape[0], attackable_ground_area[1].armies)
+                    if n_attacker_armies > self.atta_wins_ground_combact.shape[0] and attackable_ground_area[1].armies > self.atta_wins_ground_combact.shape[1]:
+                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, attackable_ground_area[1].armies)
+                    elif n_attacker_armies > self.atta_wins_ground_combact.shape[0]:
+                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, self.atta_wins_ground_combact.shape[1])
+                    elif attackable_ground_area[1].armies > self.atta_wins_ground_combact.shape[1]:
+                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(self.atta_wins_ground_combact.shape[0], attackable_ground_area[1].armies)
 
                     print('Start battle!')
                     print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
-                    conquered, n_attacker_armies, last_attack_armies = player.ground_combact(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies, atta_wins_ground_combact)
+                    conquered = player.ground_combact(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies, self.atta_wins_ground_combact)
                     if conquered:
-                        if player.strategy == 'Aggressive':
-                            armies_to_move = n_attacker_armies
-                        elif player.strategy == 'Passive':
-                            armies_to_move = last_attack_armies
-                        else:
-                            armies_to_move = math.floor((n_attacker_armies + last_attack_armies) / 2)
-                            if armies_to_move == 0:
-                                armies_to_move = 1
-                        attackable_ground_area[0].armies -= armies_to_move
-                        attackable_ground_area[1].armies += armies_to_move
                         # TODO
                         # Calcolare i nuovi territori da attaccare a partire dal territorio appena conquistato
                         for neighbor in self.grid.get_neighbors(attackable_ground_area[1].unique_id):

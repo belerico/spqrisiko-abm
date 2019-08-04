@@ -196,8 +196,18 @@ class Player(Agent):
             print('Defender has lost the area!')
             ground_area_to.owner = ground_area_from.owner
             conquered = True
+            if self.strategy == 'Aggressive':
+                armies_to_move = n_attacker_armies
+            elif self.strategy == 'Passive':
+                armies_to_move = min(3, n_attacker_armies)
+            else:
+                armies_to_move = math.floor((n_attacker_armies + min(3, n_attacker_armies)) / 2)
+                if armies_to_move == 0:
+                    armies_to_move = 1
+            ground_area_from.armies -= armies_to_move
+            ground_area_to.armies += armies_to_move
 
-        return conquered, n_attacker_armies, min(3, n_attacker_armies)
+        return conquered
 
     def ground_combact(
         self, 
@@ -242,5 +252,15 @@ class Player(Agent):
             print('Defender has lost the area!')
             ground_area_to.owner = ground_area_from.owner
             conquered = True
+            if self.strategy == 'Aggressive':
+                armies_to_move = n_attacker_armies
+            elif self.strategy == 'Passive':
+                armies_to_move = min(3, n_attacker_armies)
+            else:
+                armies_to_move = math.floor((n_attacker_armies + min(3, n_attacker_armies)) / 2)
+                if armies_to_move == 0:
+                    armies_to_move = 1
+            ground_area_from.armies -= armies_to_move
+            ground_area_to.armies += armies_to_move
 
-        return conquered, n_attacker_armies, min(3, n_attacker_armies)
+        return conquered

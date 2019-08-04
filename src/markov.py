@@ -10,18 +10,17 @@ throwing i dice.
 The probs dict contains all those probabilities, so for example probs['11'][0] = 21/36 is the
 probability that the defender loses 0 armies throwing 1 dice with the attacker throwing 1 dice """
 
-probs_ground_combact = {
+probs = {
     '11': [21/36, 5/12],
+    '12': [161/216, 55/216],
+    '13': [1071/1296, 225/1296],
     '21': [91/216, 125/216],
     '22': [581/1296, 35/108, 295/1296],
+    '23': [4816/7776, 1981/7776, 979/7776],
     '31': [441/1296, 855/1296],
     '32': [2275/7776, 2611/7776, 2890/7776],
     '33': [17871/46656, 12348/46656, 10017/46656, 6420/46656]
 }
-probs_combact_by_sea = copy.deepcopy(probs_ground_combact)
-probs_combact_by_sea['12'] = [161/216, 55/216]
-probs_combact_by_sea['13'] = [1071/1296, 225/1296]
-probs_combact_by_sea['23'] = [4816/7776, 1981/7776, 979/7776]
 
 def get_probabilities_combact_by_sea(A: int, D: int):
     
@@ -62,7 +61,7 @@ def get_probabilities_combact_by_sea(A: int, D: int):
             atta_dice = min(3,a)
             defe_dice = min(3,d)
             min_dice = min(atta_dice, defe_dice)
-            for k, prob in enumerate(probs_combact_by_sea[str(atta_dice) + '' + str(defe_dice)]):
+            for k, prob in enumerate(probs[str(atta_dice) + '' + str(defe_dice)]):
                 try:
                     Q.loc[(a,d), (a-min_dice+k, d-k)] = prob
                 except KeyError:
@@ -170,7 +169,7 @@ def get_probabilities_ground_combact(A: int, D: int):
             defe_dice = min(3,d)
             if atta_dice >= defe_dice:
                 min_dice = min(atta_dice, defe_dice)
-                for k, prob in enumerate(probs_ground_combact[str(atta_dice) + '' + str(defe_dice)]):
+                for k, prob in enumerate(probs[str(atta_dice) + '' + str(defe_dice)]):
                     try:
                         Q.loc[(a,d), (a-min_dice+k, d-k)] = prob
                     except KeyError:
