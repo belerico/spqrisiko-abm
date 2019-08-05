@@ -54,7 +54,7 @@ class SPQRisiko(Model):
         self.ground_areas = []
         self.sea_areas = []
         # Probabilities that the attacker wins on a ground combact
-        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(10, 10)
+        self.atta_wins_combact, _, _ = get_probabilities_ground_combact(10, 10)
         # Probabilities that the attacker wins on a combact by sea
         self.atta_wins_combact_by_sea, _, _ = get_probabilities_combact_by_sea(10, 10)
 
@@ -292,11 +292,27 @@ class SPQRisiko(Model):
                     territories[random_territory].power_place = True
                     print('Player ' + str(player.unique_id) + ' gets a power place')
 
-    def get_territories_by_player(self, player, ground_type="ground"):
+    def get_territories_by_player(self, player: Player, ground_type="ground"):
         if ground_type == "ground":
             return [t for t in self.ground_areas if t.owner.unique_id == player.unique_id]
         elif ground_type == "sea":
             return [t for t in self.sea_areas if t.trireme[self.players.index(player)] > 0]
+
+    def update_atta_wins_combact_matrix(self, attacker_armies, defender_armies, mat_type='combact'):
+        if mat_type == 'combact':
+            if attacker_armies > self.atta_wins_combact.shape[0] and defender_armies > self.atta_wins_combact.shape[1]:
+                self.atta_wins_combact, _, _ = get_probabilities_ground_combact(attacker_armies, defender_armies)
+            elif attacker_armies > self.atta_wins_combact.shape[0]:
+                self.atta_wins_combact, _, _ = get_probabilities_ground_combact(attacker_armies, self.atta_wins_combact.shape[1])
+            elif defender_armies > self.atta_wins_combact.shape[1]:
+                self.atta_wins_combact, _, _ = get_probabilities_ground_combact(self.atta_wins_combact.shape[0], defender_armies)
+        elif mat_type == 'combact_by_sea':
+            if attacker_armies > self.atta_wins_combact_by_sea.shape[0] and defender_armies > self.atta_wins_combact_by_sea.shape[1]:
+                self.atta_wins_combact, _, _ = get_probabilities_ground_combact(attacker_armies, defender_armies)
+            elif attacker_armies > self.atta_wins_combact_by_sea.shape[0]:
+                self.atta_wins_combact, _, _ = get_probabilities_ground_combact(attacker_armies, self.atta_wins_combact_by_sea.shape[1])
+            elif defender_armies > self.atta_wins_combact_by_sea.shape[1]:
+                self.atta_wins_combact, _, _ = get_probabilities_ground_combact(self.atta_wins_combact_by_sea.shape[0], defender_armies)
 
     def step(self):
         for player in self.players:
@@ -334,43 +350,27 @@ class SPQRisiko(Model):
             # 4) Combattimento navale
             print('\n\nNAVAL COMBACT!!')
             # Get all sea_areas that the current player can attack
-            player_sea_areas = [
-                sea_area 
-                for sea_area in self.sea_areas 
-                if sea_area.trireme[player.unique_id] > 0
-            ]
-            
-            """ and \
-                len([
-                    adv 
-                    for adv, adv_n_trireme in enumerate(sea_area.trireme) 
-                    if player.unique_id != adv and \
-                        adv_n_trireme > 0 and \
-                        sea_area.trireme[player.unique_id] >= min(3, adv_n_trireme)
-                ]) > 0 """
+            attackable_sea_areas = []
+            for sea_area in self.get_territories_by_player(player, ground_type='sea'):
+                # Choose the adversary that has the lower probability of winning the combact
+                min_trireme = min(sea_area.trireme)
+                if min_trireme > 0:
+                    adv_min_trireme = sea_area.trireme.index(min_trireme)
+                    # Check if the atta_wins_combact probabilities matrix needs to be recomputed 
+                    self.update_atta_wins_combact_matrix(sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme])
+                    if player.unique_id != adv_min_trireme and self.atta_wins_combact[sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme]] >= player.get_aggressivity():
+                        attackable_sea_areas.append([sea_area, adv_min_trireme])
 
-            for sea_area in player_sea_areas:
-                sea_area.already_fought = True
-                possible_adversaries = [
-                    adv 
-                    for adv, adv_n_trireme in enumerate(sea_area.trireme) 
-                    if player.unique_id != adv and \
-                        adv_n_trireme > 0 and \
-                        sea_area.trireme[player.unique_id] >= min(3, adv_n_trireme)
-                ]
-                if len(possible_adversaries) > 0:
-                    # pick a random player to attack
-                    adversary = self.random.randint(0, len(possible_adversaries) - 1)
-                    adversary = self.players[possible_adversaries[adversary]]
-                    # Randomly select how many attack and defense trireme
-                    n_attacker_trireme = sea_area.trireme[player.unique_id]
-                    # The defender must always use the maximux number of armies to defend itself
-                    # n_defense_trireme = sea_area.trireme[adversary.unique_id] if sea_area.trireme[adversary.unique_id] <= 3 else 3
-                    # Let's combact biatch!!
-                    print('Start battle!')
-                    print('Trireme in ' + sea_area.name + ': ', sea_area.trireme)
-                    print('Player ' + str(player.unique_id) + ' attacks Player ' + str(adversary.unique_id) + ' on ' + sea_area.name)
-                    player.naval_combact(sea_area, adversary, n_attacker_trireme)
+            for sea_area, adv, _ in attackable_sea_areas:
+                # Randomly select how many attack and defense trireme
+                attacker_trireme = sea_area.trireme[player.unique_id]
+                # The defender must always use the maximux number of armies to defend itself
+                # n_defense_trireme = sea_area.trireme[adversary.unique_id] if sea_area.trireme[adversary.unique_id] <= 3 else 3
+                # Let's combact biatch!!
+                print('Start battle!')
+                print('Trireme in ' + sea_area.name + ': ', sea_area.trireme)
+                print('Player ' + str(player.unique_id) + ' attacks Player ' + str(adv) + ' on ' + sea_area.name)
+                player.naval_combact(sea_area, adv, attacker_trireme, self.atta_wins_combact)
 
             # 5) Attacchi via mare
             print('\n\nCOMBACT BY SEA!!')
@@ -404,25 +404,20 @@ class SPQRisiko(Model):
                                     elif not has_enemies and ground_area.armies - 1 >= min(3, sea_area_neighbor.armies):
                                         attackable_ground_areas.append([ground_area, sea_area_neighbor, 1])
 
-            for attackable_ground_area in attackable_ground_areas:
-                if attackable_ground_area[0].armies - attackable_ground_area[2] > attackable_ground_area[2] and not attackable_ground_area[1].already_attacked_by_sea:
-                    attackable_ground_area[1].already_attacked_by_sea = True
+            for ground_area_from, ground_area_to, armies_to_left in attackable_ground_areas:
+                if ground_area_from.armies - armies_to_left > armies_to_left and not ground_area_to.already_attacked_by_sea:
+                    ground_area_to.already_attacked_by_sea = True
 
                     # Attacker always attacks with the maximum number of armies
                     # The defender must always use the maximux number of armies to defend itself
-                    n_attacker_armies = attackable_ground_area[0].armies - attackable_ground_area[2]
+                    attacker_armies = ground_area_from.armies - armies_to_left
 
                     # Check if the atta_wins_combact_by_sea probabilities matrix needs to be recomputed                   
-                    if n_attacker_armies > self.atta_wins_combact_by_sea.shape[0] and attackable_ground_area[1].armies > self.atta_wins_combact_by_sea.shape[1]:
-                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, attackable_ground_area[1].armies)
-                    elif n_attacker_armies > self.atta_wins_combact_by_sea.shape[0]:
-                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, self.atta_wins_combact_by_sea.shape[1])
-                    elif attackable_ground_area[1].armies > self.atta_wins_combact_by_sea.shape[1]:
-                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(self.atta_wins_combact_by_sea.shape[0], attackable_ground_area[1].armies)
+                    self.update_atta_wins_combact_matrix(attacker_armies, ground_area_to.armies, mat_type='combact_by_sea')
 
                     print('Start battle!')
-                    print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
-                    conquered = player.combact_by_sea(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies)
+                    print('Player ' + str(player.unique_id) + ' attacks on ' + ground_area_to.name + ' from ' + ground_area_from.name)
+                    conquered = player.combact_by_sea(ground_area_from, ground_area_to, attacker_armies)
                     if conquered:
                         can_draw = True
 
@@ -442,34 +437,29 @@ class SPQRisiko(Model):
                             
                             attackable_ground_areas.append([ground_area, neighbor])
             
-            for attackable_ground_area in attackable_ground_areas:
-                if attackable_ground_area[0].armies > 1:
+            for ground_area_from, ground_area_to in attackable_ground_areas:
+                if ground_area_from.armies > 1:
 
                     # Attacker always attacks with the maximum number of armies
                     # The defender must always use the maximux number of armies to defend itself
-                    n_attacker_armies = attackable_ground_area[0].armies - 1
+                    attacker_armies = ground_area_from.armies - 1
 
                     # Check if the atta_wins_ground_combact probabilities matrix needs to be recomputed
-                    if n_attacker_armies > self.atta_wins_ground_combact.shape[0] and attackable_ground_area[1].armies > self.atta_wins_ground_combact.shape[1]:
-                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, attackable_ground_area[1].armies)
-                    elif n_attacker_armies > self.atta_wins_ground_combact.shape[0]:
-                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(n_attacker_armies, self.atta_wins_ground_combact.shape[1])
-                    elif attackable_ground_area[1].armies > self.atta_wins_ground_combact.shape[1]:
-                        self.atta_wins_ground_combact, _, _ = get_probabilities_ground_combact(self.atta_wins_ground_combact.shape[0], attackable_ground_area[1].armies)
+                    self.update_atta_wins_combact_matrix(attacker_armies, ground_area_to.armies)
 
                     print('Start battle!')
-                    print('Player ' + str(player.unique_id) + ' attacks on ' + attackable_ground_area[1].name + ' from ' + attackable_ground_area[0].name)
-                    conquered = player.ground_combact(attackable_ground_area[0], attackable_ground_area[1], n_attacker_armies, self.atta_wins_ground_combact)
+                    print('Player ' + str(player.unique_id) + ' attacks on ' + ground_area_to.name + ' from ' + ground_area_from.name)
+                    conquered = player.combact(ground_area_from, ground_area_to, attacker_armies, self.atta_wins_combact)
                     if conquered:
                         # TODO
                         # Calcolare i nuovi territori da attaccare a partire dal territorio appena conquistato
-                        for neighbor in self.grid.get_neighbors(attackable_ground_area[1].unique_id):
+                        for neighbor in self.grid.get_neighbors(ground_area_to.unique_id):
                             neighbor = self.grid.get_cell_list_contents([neighbor])[0]
                             if isinstance(neighbor, GroundArea) and \
                                 neighbor.owner.unique_id != player.unique_id and \
-                                min(3, attackable_ground_area[1].armies - 1) >= min(3, neighbor.armies):
+                                min(3, ground_area_to.armies - 1) >= min(3, neighbor.armies):
                                 
-                                attackable_ground_areas.append([attackable_ground_area[1], neighbor])
+                                attackable_ground_areas.append([ground_area_to, neighbor])
                         can_draw = True
 
 
