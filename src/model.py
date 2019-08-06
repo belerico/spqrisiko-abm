@@ -475,6 +475,18 @@ class SPQRisiko(Model):
                     i += 1
 
             # 7) Spostamento strategico di fine turno
+            # Move armies from non-attackable ground area (if one) to another one
+            # Get the first non-attackable ground area with > 1 armies
+            non_attackables = self.non_attackable_areas(player)
+            if len(non_attackables) > 0:
+                i = 0
+                moved = False
+                while not moved and i < len(non_attackables):
+                    non_attackable = non_attackables[i]
+                    # Based on strategy move armies to neighbor to get higher units
+                    moved = self.move_armies_strategy_based(player, non_attackable)
+                    i += 1
+
 
             # 8) Presa della carta
             # Il giocatore può dimenticarsi di pescare la carta ahah sarebbe bello fare i giocatori smemorati
@@ -506,6 +518,66 @@ class SPQRisiko(Model):
                             })
 
         return attacks
+
+    # Get non attackable areas wiht at least 2 armies and with an ally neighbor
+    def non_attackable_areas(self, player):
+        non_attackables = []
+        for ground_area in self.ground_areas:
+            if ground_area.owner.unique_id == player.unique_id and ground_area.armies > 1:
+                attackable, has_ally_neighbor = False, False
+                for neighbor in self.grid.get_neighbors(ground_area.unique_id):
+                    neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+                    if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id != player.unique_id:
+                        attackable = True
+                        break
+                    has_ally_neighbor = True
+
+                if not attackable and has_ally_neighbor:
+                    non_attackables.append(ground_area)
+
+        return non_attackables
+
+    def is_not_attackable(self, area, player):
+        for neighbor in self.grid.get_neighbors(area.unique_id):
+            neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+            if neighbor.owner.unique_id != player.unique_id:
+                return False
+
+        return True
+
+    def is_neighbor_of(self, area1, area2):
+        for neighbor in self.grid.get_neighbors(area1.unique_id):
+            neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+            if neighbor.owner.unique_id == area2.unique_id:
+                return True
+
+        return False
+
+    # Move armies from non attackable area to attackable neighbor based on armies:
+    # "Aggressive" -> higher # of armies
+    # "Passive" -> lower # of armies
+    # "Neutral" -> random
+    def move_armies_strategy_based(self, player, area_from):
+        attackable_neighbors = []
+        for neighbor in self.grid.get_neighbors(area_from.unique_id):
+            neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+            if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id != area_from.owner.unique_id:
+                if not self.is_not_attackable(neighbor, player):
+                    attackable_neighbors.append(neighbor)
+        if len(attackable_neighbors) == 0:
+            return False
+
+        attackable_neighbors.sort(key=lambda x: x.armies, reverse=True)
+        if player.strategy == "Aggressive":
+            area_to = attackable_neighbors[0]
+        elif player.strategy == "Neutral":
+            area_to = random.choice(attackable_neighbors)
+        else:
+            area_to = attackable_neighbors[-1]
+
+        area_to.armies += area_from.armies - 1
+        area_from.armies = 1
+        return True
 
 
     def run_model(self, n):
