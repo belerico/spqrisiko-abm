@@ -235,17 +235,6 @@ class Player(Agent):
             print('Attacker must attack with a number of armies that are greater or equal to the number of defender\'s armies. Combact done!')
         if ground_area_to.armies <= 0:
             print('Defender has lost the area!')
-            ground_area_to.owner = ground_area_from.owner
             conquered = True
-            if self.strategy == 'Aggressive':
-                armies_to_move = attacker_armies
-            elif self.strategy == 'Passive':
-                armies_to_move = min(3, attacker_armies)
-            else:
-                armies_to_move = math.floor((attacker_armies + min(3, attacker_armies)) / 2)
-                if armies_to_move == 0:
-                    armies_to_move = 1
-            ground_area_from.armies -= armies_to_move
-            ground_area_to.armies += armies_to_move
 
-        return conquered
+        return conquered, min(3, attacker_armies)
