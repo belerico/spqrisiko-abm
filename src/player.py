@@ -93,6 +93,7 @@ class Player(Agent):
         for territory in self.model.ground_areas:
             # territory = self.model.grid.get_cell_list_contents([territory['id']])[0]
             if territory.owner == self.unique_id and territory.power_place:
+                print('Player ' + str(self.unique_id) + ' got one legionary for power place in ' + territory.name)
                 territory.armies += 1
 
     def sacrifice_trireme(
@@ -138,14 +139,14 @@ class Player(Agent):
                     attacker_trireme -= 1
                     print('Attacker lose one army')
 
-        if atta_wins[attacker_trireme - 1, sea_area.trireme[adv] - 1] < aggressivity:
-            print('The attacker has a probability of ' + str(atta_wins[attacker_trireme - 1, sea_area.trireme[adv] - 1]) + ', and is less than ' + str(aggressivity))
-        if attacker_trireme <= 0:
-            print('Attacker lost the battle!')
-        if min(3, attacker_trireme) < min(3, sea_area.trireme[adv]):
-            print('Attacker must attack with a number of trireme that are greater or equal to the number of defender\'s trireme. Combact done!')
         if sea_area.trireme[adv] <= 0:
             print('Defender has lost all of its trireme!')
+        elif attacker_trireme <= 0:
+            print('Attacker lost the battle!')
+        elif atta_wins[attacker_trireme - 1, sea_area.trireme[adv] - 1] < aggressivity:
+            print('The attacker has a probability of ' + str(atta_wins[attacker_trireme - 1, sea_area.trireme[adv] - 1]) + ', and is less than ' + str(aggressivity))
+        elif min(3, attacker_trireme) < min(3, sea_area.trireme[adv]):
+            print('Attacker must attack with a number of trireme that are greater or equal to the number of defender\'s trireme. Combact done!')
     
     def combact_by_sea(
         self, 
@@ -175,24 +176,14 @@ class Player(Agent):
                     attacker_armies -= 1
                     print('Attacker lose one army')
 
-        if attacker_armies <= 0:
-            print('Attacker lost the battle!')
         if ground_area_to.armies <= 0:
             print('Defender has lost the area!')
             ground_area_to.owner = ground_area_from.owner
             conquered = True
-            if self.strategy == 'Aggressive':
-                armies_to_move = attacker_armies
-            elif self.strategy == 'Passive':
-                armies_to_move = min(3, attacker_armies)
-            else:
-                armies_to_move = math.floor((attacker_armies + min(3, attacker_armies)) / 2)
-                if armies_to_move == 0:
-                    armies_to_move = 1
-            ground_area_from.armies -= armies_to_move
-            ground_area_to.armies += armies_to_move
+        elif attacker_armies <= 0:
+            print('Attacker lost the battle!')
 
-        return conquered
+        return conquered, min(3, attacker_armies)
 
     def combact(
         self, 
@@ -227,14 +218,15 @@ class Player(Agent):
                     attacker_armies -= 1
                     print('Attacker lose one army')
 
-        if atta_wins[attacker_armies - 1, ground_area_to.armies - 1] < aggressivity:
-            print('The attacker has a probability of ' + str(atta_wins[attacker_armies - 1, ground_area_to.armies - 1]) + ', and is less than ' + str(aggressivity))
-        if attacker_armies <= 0:
-            print('Attacker lost the battle!')
-        if min(3, attacker_armies) < min(3, ground_area_to.armies):
-            print('Attacker must attack with a number of armies that are greater or equal to the number of defender\'s armies. Combact done!')
         if ground_area_to.armies <= 0:
             print('Defender has lost the area!')
+            ground_area_to.owner = ground_area_from.owner
             conquered = True
+        elif attacker_armies <= 0:
+            print('Attacker lost the battle!')
+        elif atta_wins[attacker_armies - 1, ground_area_to.armies - 1] < aggressivity:
+            print('The attacker has a probability of ' + str(atta_wins[attacker_armies - 1, ground_area_to.armies - 1]) + ', and is less than ' + str(aggressivity))
+        elif min(3, attacker_armies) < min(3, ground_area_to.armies):
+            print('Attacker must attack with a number of armies that are greater or equal to the number of defender\'s armies. Combact done!')
 
         return conquered, min(3, attacker_armies)
