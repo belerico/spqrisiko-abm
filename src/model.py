@@ -437,6 +437,8 @@ class SPQRisiko(Model):
             attack_num = 0
 
             while attack_num < len(attacks):
+                print('ATTACK NUM: ', attack_num)
+                print('LEN(ATTACKS): ', len(attacks))
                 attack = attacks[attack_num]
                 attacker_armies = attack["attacker"].armies - 1                
                 print('Battle: {} (player {}) with {} VS {} (player {}) with {}'.format(
@@ -493,12 +495,16 @@ class SPQRisiko(Model):
         if attacks_type == 'ground':
             prev_max_attacks = len(attacks)
             for attack in attacks[attack_num:prev_max_attacks]:
-                if attack['defender'].owner.unique_id == conquered.owner.unique_id:
+                if attack['defender'].unique_id == conquered.unique_id:
                     # print('Since the defender has been conquered, I maybe attack from there')
                     attackables = self.get_attackable_ground_areas_from(attack['defender'])
                     if attackables != []:
+                        # print('The attacker can attack from the conquered territory')
                         for attackable in attackables:
                             attacks.append(attackable)
+                    else:
+                        # print('The attacker cannot attack from the conquered territory')
+                        attack_num += 1
                 elif attack['attacker'].unique_id == last_attacker.unique_id:
                     if attack['attacker'].armies - 1 >= min(3, attack['defender'].armies):
                         prob_win = self.atta_wins_combact_by_sea[attack['attacker'].armies - 2, attack['defender'].armies - 1]
@@ -517,11 +523,11 @@ class SPQRisiko(Model):
             attacks.sort(key=lambda x: x["prob_win"], reverse=True)
         elif attacks_type == 'by_sea':
             for attack in attacks[attack_num:]:
-                if attack['defender'].owner.unique_id == conquered.owner.unique_id:
+                if attack['defender'].unique_id == conquered.unique_id:
                     # print('Since the defender has been conquered, I delete it')
                     del attacks[attack_num]
                 elif attack['attacker'].unique_id == last_attacker.unique_id:
-                    # Maybe it could change the armie to leave due to garrisons
+                    # Maybe it could change the armies to leave due to garrisons
                     armies_to_leave = self.get_armies_to_leave(attack['attacker'])
                     if attack['attacker'].armies - armies_to_leave >= min(3, attack['defender'].armies):
                         prob_win = self.atta_wins_combact_by_sea[attack['attacker'].armies - armies_to_leave - 1, attack['defender'].armies - 1]
