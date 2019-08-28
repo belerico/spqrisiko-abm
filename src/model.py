@@ -9,9 +9,11 @@ from . import constants
 from .markov import get_probabilities_ground_combact, get_probabilities_combact_by_sea
 from .territory import GroundArea, SeaArea
 from .player import Player
+from .strategies import strategies
 from . import markov
 
 from operator import itemgetter
+from functools import cmp_to_key
 
 from mesa import Agent, Model
 from mesa.time import RandomActivation
@@ -24,20 +26,29 @@ class SPQRisiko(Model):
 
     def __init__(self, n_players, points_limit, strategy):
         super().__init__()
+        self.players_goals = ["BE", "LA", "PP"]  # Definition of acronyms on `strategies.py`
+        self.current_turn = 0
+        self.journal = []  # Keep track of main events
+        self.reinforces_by_goal = {}
+        self.tris_by_goal = {}
         # How many agent players wiil be
         self.n_players = n_players if n_players <= constants.MAX_PLAYERS else constants.MAX_PLAYERS
         # How many computer players will be
         self.n_computers = constants.MAX_PLAYERS - n_players
         # Creation of player and computer agents
-        self.players = [Player(i, computer=False, strategy=self.get_strategy_setup(strategy), model=self)
+        self.players = [Player(i, computer=False, strategy=self.get_strategy_setup(strategy),
+                               goal=self.random.choice(self.players_goals), model=self)
                         for i in range(self.n_players)]
+        for player in self.players:
+            self.log("{} follows {} goal with a {} strategy".format(player.color, player.goal, player.strategy))
         self.computers = [
-            Player(i, computer=True, strategy="Neutral", model=self)
+            Player(i, computer=True, strategy="Neutral", goal=self.random.choice(self.players_goals), model=self)
             for i in range(self.n_players, self.n_players + self.n_computers)]
         self.points_limit = points_limit  # limit at which one player wins
         self.deck = self.create_deck()
         self.random.shuffle(self.deck)
         self.trashed_cards = []
+        self.precompute_tris_reinforces_by_goal()
         # Initialize map
         self.G, self.territories_dict = self.create_graph_map()
         self.grid = NetworkGrid(self.G)
@@ -111,9 +122,9 @@ class SPQRisiko(Model):
     @staticmethod
     def get_win_probability_threshold_from_strategy(strategy):
         probs = {
-            "Passive": 0.8,
-            "Neutral": 0.7,
-            "Aggressive": 0.6
+            "Passive": 0.7,
+            "Neutral": 0.62,
+            "Aggressive": 0.55
         }
         return probs[strategy]
 
@@ -121,8 +132,8 @@ class SPQRisiko(Model):
     def get_movable_armies_by_strategy(strategy, minimum, maximum):
         nomads_percentage = {
             "Passive": 0,
-            "Neutral": 0.5,
-            "Aggressive": 1
+            "Neutral": 0.4,
+            "Aggressive": 0.8
         }
         return round((maximum - minimum) * nomads_percentage[strategy] + minimum)
 
@@ -197,8 +208,39 @@ class SPQRisiko(Model):
                 reinforces[key] += value
         return reinforces
 
-    @staticmethod
-    def get_best_tris(cards):
+    def precompute_tris_reinforces_by_goal(self):
+        # precompute tris and assign points based on strategy
+        all_possible_tris = [list(t) for t in itertools.combinations(self.deck, 3)]
+        all_reinforces = [SPQRisiko.reinforces_from_tris(tris) for tris in all_possible_tris]
+        # Remove None from list
+        real_tris = [all_possible_tris[i] for i in range(len(all_reinforces)) if all_reinforces[i]]
+        all_reinforces = [i for i in all_reinforces if i]
+        named_tris = {}
+        for i, tris in enumerate(real_tris):
+            name = get_tris_name(tris)
+            named_tris[name] = all_reinforces[i]
+            self.reinforces_by_goal[name] = {}
+            for goal, value in strategies.items():
+                self.reinforces_by_goal[name][goal] = get_reinforcements_score(all_reinforces[i], value["tris"])
+
+        # order tris name by score
+        for goal, value in strategies.items():
+            self.tris_by_goal[goal] = []
+            for tris in real_tris:
+                name = get_tris_name(tris)
+                if name not in self.tris_by_goal[goal]:
+                    self.tris_by_goal[goal].append(name)
+            self.tris_by_goal[goal] = sorted(self.tris_by_goal[goal], key=cmp_to_key(lambda a, b: self.reinforces_by_goal[b][goal] - self.reinforces_by_goal[a][goal]))
+
+        self.reinforces_by_goal["average"] = {}
+        for goal, value in strategies.items():
+            sum, count = 0, 0
+            for tris in real_tris:
+                count += 1
+                sum += self.reinforces_by_goal[get_tris_name(tris)][goal]
+            self.reinforces_by_goal["average"][goal] = float(sum) / count
+
+    def get_best_tris(self, cards, player):
         if len(cards) < 3:
             return None
         best_tris = None
@@ -211,11 +253,21 @@ class SPQRisiko(Model):
         all_reinforces = [i for i in all_reinforces if i]
         if len(all_reinforces) == 0:
             return None
-        # TODO: change 1,2,3 multiplier based on what we think it is better
-        quantify_reinforces = [1*r["legionaries"] + 2*r["triremes"] + 3*r["centers"] for r in all_reinforces if r]
-        index = quantify_reinforces.index(max(quantify_reinforces))
-        best_tris = real_tris[index]
-        return best_tris
+
+        named_tris = []
+        for tris in real_tris:
+            named_tris.append(get_tris_name(tris))
+        highest_score = 0
+        i = -1
+        for i, name in enumerate(named_tris):
+            score = self.reinforces_by_goal[name][player.goal]
+            if highest_score < score:
+                index = i
+                highest_score = score
+
+        best_tris = real_tris[i]
+        # Play tris if it is a convenient tris (it is in the first half of tris ordered by score)
+        return best_tris if self.tris_by_goal[player.goal].index(get_tris_name(tris)) <= len(self.tris_by_goal[player.goal]) / 2 else None
 
     def play_tris(self, tris, player):
         reinforces = self.reinforces_from_tris(tris)
@@ -294,6 +346,7 @@ class SPQRisiko(Model):
         if isinstance(armies, dict):
             for key, value in armies.items():
                 self.put_reinforces(player, value, key)
+        # TODO: put by goals
         elif reinforce_type == "triremes":
             territories = self.get_territories_by_player(player, "sea")
             if len(territories) > 0:
@@ -334,6 +387,7 @@ class SPQRisiko(Model):
                 self.atta_wins_combact_by_sea, _, _ = get_probabilities_combact_by_sea(self.atta_wins_combact_by_sea.shape[0], defender_armies)
 
     def step(self):
+        self.current_turn += 1
         for player in self.players:
             can_draw = False
             territories, power_places = self.count_players_territories_power_places()
@@ -345,23 +399,27 @@ class SPQRisiko(Model):
 
             # 1.1) Controllo vittoria
             if self.winner(player):
-                print("{} - {} ha vinto!".format(player.unique_id, player.color))
                 self.running = False
+                self.log("{} has won!".format(player.color))
                 return True
 
             # 2) Fase dei rinforzi
             print('\n\nREINFORCES')
             player.update_ground_reinforces_power_places()
-            self.put_reinforces(player, player.get_ground_reinforces(territories))
+            reinforces = player.get_ground_reinforces(territories)
+            self.log("{} earns {} legionaries (he owns {} territories)".format(player.color, reinforces, territories[player.unique_id]))
+            self.put_reinforces(player, reinforces)
             # player.sacrifice_trireme(sea_area_from, ground_area_to)
 
             # use card combination
             # displace ground, naval and/or power places on the ground
-            tris = self.get_best_tris(player.cards)
+            tris = self.get_best_tris(player.cards, player)
 
             if tris:
                 reinforces = self.play_tris(tris, player)
+                self.log("{} play tris {}".format(player.color, get_tris_name(tris)))
                 self.put_reinforces(player, reinforces)
+                # TODO: log where reinforces are put
 
             # 3) Movimento navale
             # player.naval_movement(sea_area_from, sea_area_to, n_trireme)
@@ -453,6 +511,9 @@ class SPQRisiko(Model):
                     attack["attacker"].armies -= nomads
                     attack["defender"].armies = nomads
                     can_draw = True
+                    self.log("{} conquered {} from {} and it moves {} armies there out of {}".format(
+                        player.color, attack["defender"].name, attack["attacker"].name, nomads, max_moveable_armies))
+
                     # Re-sort newly attackable areas with newer probabilities
                     # attacks = self.get_attackable_ground_areas(player)
                     # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
@@ -483,6 +544,7 @@ class SPQRisiko(Model):
                     player.cards.append(card)
             else: 
                 print('Fuck it: I forgot to draw the card!')
+            can_draw = False
 
         self.schedule.step()
         self.datacollector.collect(self)
@@ -676,6 +738,8 @@ class SPQRisiko(Model):
         area_from.armies = 1
         return True
 
+    def log(self, log):
+        self.journal.append("Turn {}: ".format(self.current_turn) + log)
 
     def run_model(self, n):
         for _ in range(n):
@@ -690,3 +754,13 @@ def get_n_armies_by_player(model, player=None):
         for player in model.players:
             sum_a += sum([t.armies for t in model.get_territories_by_player(player)])
         return sum_a / len(model.players)
+
+# Tris name is the ordered initial letters of cards type
+def get_tris_name(tris):
+    if len(tris) != 3:
+        raise Exception("tris name parameter error")
+    return "-".join([card[0] for card in sorted(set([card["type"] for card in tris]))])
+
+def get_reinforcements_score(reinforces, multipliers):
+    m, r = multipliers, reinforces
+    return m[0]*r["legionaries"] + m[1]*r["triremes"] + m[2]*r["centers"]

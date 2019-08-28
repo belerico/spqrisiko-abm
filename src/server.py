@@ -1,6 +1,6 @@
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
-from mesa.visualization.modules import NetworkModule, ChartModule, BarChartModule
+from mesa.visualization.modules import NetworkModule, ChartModule, BarChartModule, TextElement
 import os
 from .model import SPQRisiko
 from .territory import GroundArea, SeaArea
@@ -25,15 +25,18 @@ def network_portrayal(G):
 
     def get_info(agent):
         if isinstance(agent, GroundArea):
-            return "{}<br/>N. armies: {}".format(agent.name, agent.armies)
+            s = "{}<br/>{} armies: {}".format(agent.name, agent.owner.color ,agent.armies)
+            if agent.power_place > 0:
+                s += "<br/>Power place here!"
         else:
             s = "{}<br/>".format(agent.name)
-            for player in range(agent.model.n_players):
-                s += "N. trireme player {}: {}<br/>".format(player, agent.trireme[player])
-            return s
+            for player in agent.model.players:
+                if agent.trireme[player.unique_id] > 0:
+                    s += "{} triremes: {}<br/>".format(player.color, agent.trireme[player.unique_id])
+        return s
 
     def edge_color(agent1, agent2):
-        return '#e8e8e8'
+        return 'white'
 
     def edge_width(agent1, agent2):
         return 2
@@ -60,20 +63,29 @@ def network_portrayal(G):
     return portrayal
 
 
+class JournalElement(TextElement):
+    def __init__(self):
+        pass
+
+    def render(self, model):
+        return "<h3>Journal</h3>" + "<br/>".join(model.journal)
+
+
 network = NetworkModule(network_portrayal, 500, 889, canvas_background="/assets/images/map889x500.jpg", library='d3')
-armies_line = ChartModule([{"Label": "Armies", "Color": "Black"}, {"Label": "Cards", "Color": "Red"}, {"Label": "Trash", "Color": "Green"}])
+journal = JournalElement()
+# armies_line = ChartModule([{"Label": "Armies", "Color": "Black"}, {"Label": "Cards", "Color": "Red"}, {"Label": "Trash", "Color": "Green"}])
 # cards_bar = BarChartModule([{"Label": "PlayerCards", "Color": "Black"}], scope="agent")
 
 model_params = {
     'n_players': UserSettableParameter('slider', 'Number of players', 4, 3, 5, 1,
-                                       description='Choose how many players should play the game'),
+                                       description='How many players should play the game?'),
     'points_limit': UserSettableParameter('slider', 'Points limit', 50, 50, 500, 5,
                                        description='How many points should a player reach to win the war?'),
     'strategy': UserSettableParameter('choice', "Which strategy should players play?",
                                           value="Random", choices=["Aggressive", "Defensive", "Neutral", "Random"])
 }
 
-server = ModularServer(SPQRisiko, [network, armies_line], 'S.P.Q.Risiko',
+server = ModularServer(SPQRisiko, [network, journal], 'S.P.Q.Risiko',
                        os.path.join(os.path.dirname(__file__), "assets/"), model_params)
 server.port = 8521
 

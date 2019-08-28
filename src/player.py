@@ -8,12 +8,7 @@ from mesa import Agent
 
 class Player(Agent):
     
-    def __init__(
-        self, 
-        unique_id, 
-        computer,
-        strategy,
-        model):
+    def __init__(self, unique_id, computer, strategy, goal, model):
 
         # computer: boolean, human or artificial player
         # artificial players are passive-only
@@ -21,6 +16,7 @@ class Player(Agent):
         self.victory_points = 0
         self.color = constants.COLORS[unique_id %
                                       constants.MAX_PLAYERS]  # one color per id
+        self.goal = goal
         self.cards = []
         self.strategy = strategy
         super().__init__(unique_id,  model)

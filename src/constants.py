@@ -1,9 +1,9 @@
 COLORS = [
-    "#d11141",
-    "#00b159",
-    "#00aedb",
-    "#f37735",
-    "#ffc425"
+    "royalblue",
+    "fuchsia",
+    "black",
+    "gold",
+    "green"
 ]
 
 MAX_PLAYERS = 5
