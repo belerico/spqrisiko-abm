@@ -350,18 +350,44 @@ class SPQRisiko(Model):
         elif reinforce_type == "triremes":
             territories = self.get_territories_by_player(player, "sea")
             if len(territories) > 0:
-                random_territory = self.random.randint(0, len(territories) - 1)
-                territories[random_territory].trireme[self.players.index(player)] += armies
+                if player.goal != "LA":
+                    random_territory = self.random.randint(0, len(territories) - 1)
+                    territories[random_territory].trireme[self.players.index(player)] += armies
+                else:  # Put reinforces on sea area with the lowest number of armies
+                    lowest_territory = None
+                    low = 0
+                    for sea in territories:
+                        if not lowest_territory or low > sea.trireme[self.players.index(player)]:
+                            low = sea.trireme[self.players.index(player)]
+                            lowest_territory = sea
+                    if lowest_territory:
+                        lowest_territory.trireme[self.players.index(player)] += armies
                 print('Player ' + str(player.unique_id) + ' gets ' + str(armies) + ' triremes')
         else:
             territories = self.get_territories_by_player(player, "ground")
             if len(territories) > 0:
-                random_territory = self.random.randint(0, len(territories) - 1)
                 if reinforce_type == "legionaries":
-                    territories[random_territory].armies += armies
+                    idx = self.random.randint(0, len(territories) - 1)
+                    territories[idx].armies += armies
                     print('Player ' + str(player.unique_id) + ' gets ' + str(armies) + ' legionaries')
-                else:
-                    territories[random_territory].power_place = True
+                else:  # Put Power place by goal
+                    if player.goal != "PP":
+                        idx = self.random.randint(0, len(territories) - 1)
+                        territories[idx].power_place = True
+                    else:
+                        non_attackables = self.non_attackable_areas(player)
+                        if len(non_attackables) > 0:
+                            idx = 0  # Put power place in the first non attackable ground area
+                            non_attackables[idx].power_place = True
+                        else:
+                            highest_armies_territory = None
+                            high = 0
+                            for terr in territories:
+                                if terr.armies > high or (highest_armies_territory and highest_armies_territory.power_place == False):
+                                    high = terr.armies
+                                    highest_armies_territory = terr
+                            if highest_armies_territory:
+                                highest_armies_territory.power_place = True
                     print('Player ' + str(player.unique_id) + ' gets a power place')
 
     def get_territories_by_player(self, player: Player, ground_type="ground"):
@@ -391,6 +417,7 @@ class SPQRisiko(Model):
         for player in self.players:
             can_draw = False
             territories, power_places = self.count_players_territories_power_places()
+            player_territories = self.get_territories_by_player(player, "ground")
             sea_areas = self.count_players_sea_areas()
             empires = self.maximum_empires()
 
@@ -406,7 +433,7 @@ class SPQRisiko(Model):
             # 2) Fase dei rinforzi
             print('\n\nREINFORCES')
             player.update_ground_reinforces_power_places()
-            reinforces = player.get_ground_reinforces(territories)
+            reinforces = Player.get_ground_reinforces(player_territories)
             self.log("{} earns {} legionaries (he owns {} territories)".format(player.color, reinforces, territories[player.unique_id]))
             self.put_reinforces(player, reinforces)
             # player.sacrifice_trireme(sea_area_from, ground_area_to)

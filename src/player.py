@@ -71,14 +71,11 @@ class Player(Agent):
         self.victory_points += power_places[self.unique_id]
         print('Victory points: ', self.victory_points)
 
-    def get_ground_reinforces(
-            self, 
-            territories_per_players: list):
-        
-        player_territories = territories_per_players[self.unique_id]
-        if player_territories > 11:
-            ground_reinforces = math.floor(player_territories / 3)
-        elif player_territories >= 3 and player_territories <= 11:
+    @staticmethod
+    def get_ground_reinforces(territories):
+        if len(territories) > 11:
+            ground_reinforces = math.floor(len(territories) / 3)
+        elif len(territories) >= 3:
             ground_reinforces = 3
         else:
             ground_reinforces = 1

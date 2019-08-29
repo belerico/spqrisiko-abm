@@ -11,9 +11,9 @@ def network_portrayal(G):
 
     def node_size(agent):
         if isinstance(agent, GroundArea):
-            return agent.armies + 3
+            return min(20, agent.armies + 3)
         else:
-            return max(agent.trireme) + 3
+            return min(20, max(agent.trireme) + 3)
 
     def node_color(agent):
         if isinstance(agent, GroundArea):
@@ -22,6 +22,12 @@ def network_portrayal(G):
             max_owner = agent.trireme.index(max(agent.trireme))
             return agent.model.players[max_owner].color
             # return '#0000ee'
+
+    def border_color(agent):
+        if isinstance(agent, GroundArea):
+            if agent.power_place:
+                return "white"
+        return "transparent"
 
     def get_info(agent):
         if isinstance(agent, GroundArea):
@@ -47,6 +53,7 @@ def network_portrayal(G):
     portrayal = dict()
     portrayal['nodes'] = [{'size': node_size(territories[0]),
                            'color': node_color(territories[0]),
+                           'border': border_color(territories[0]),
                            'tooltip': get_info(territories[0]),
                            "xx": territories[0].coords["x"],
                            "yy": territories[0].coords["y"],
