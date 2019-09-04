@@ -109,8 +109,12 @@ class Player(Agent):
         sea_area_from.trireme[self.unique_id] -= n_trireme
         sea_area_to.trireme[self.unique_id] += n_trireme
 
-    def naval_combact(self, sea_area: SeaArea, adv, attacker_trireme, atta_wins):
-        aggressivity = self.get_aggressivity()
+    def naval_combact(self, 
+        sea_area: SeaArea, 
+        adv, 
+        attacker_trireme, 
+        aggressivity,
+        atta_wins):
 
         while min(3, attacker_trireme) >= min(3, sea_area.trireme[adv]) and \
                 atta_wins[attacker_trireme - 1, sea_area.trireme[adv] - 1] >= aggressivity and \
@@ -186,10 +190,10 @@ class Player(Agent):
         ground_area_from:GroundArea,
         ground_area_to: GroundArea,
         attacker_armies: int,
+        aggressivity,
         atta_wins):
 
         conquered = False
-        aggressivity = self.get_aggressivity()
 
         while min(3, attacker_armies) >= min(3, ground_area_to.armies) and \
                 atta_wins[attacker_armies - 1, ground_area_to.armies - 1] >= aggressivity and \

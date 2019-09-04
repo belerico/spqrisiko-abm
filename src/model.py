@@ -447,7 +447,13 @@ class SPQRisiko(Model):
                 print('Start battle!')
                 print('Trireme in ' + sea_area.name + ': ', sea_area.trireme)
                 print('Player ' + str(player.unique_id) + ' attacks Player ' + str(adv) + ' on ' + sea_area.name)
-                player.naval_combact(sea_area, adv, attacker_trireme, self.atta_wins_combact)
+                player.naval_combact(
+                    sea_area, 
+                    adv, 
+                    attacker_trireme, 
+                    SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy), 
+                    self.atta_wins_combact
+                )
 
             # 5) Attacchi via mare
             print('\n\nCOMBACT BY SEA!!')
@@ -457,33 +463,31 @@ class SPQRisiko(Model):
 
             attacks = self.get_attackable_ground_areas_by_sea(player)
             attacks.sort(key=lambda x: x["prob_win"], reverse=True)
-            attack_num = 0
 
-            while attack_num < len(attacks):
-                attack = attacks[attack_num]
-                if not attack['defender'].already_attacked_by_sea:
-                    attack['defender'].already_attacked_by_sea = True
-                    attacker_armies = attack["attacker"].armies - attack["armies_to_leave"]            
-                    print('Battle: {} (player {}) with {} VS {} (player {}) with {}'.format(
-                            attack["attacker"].name, player.unique_id, attacker_armies,
-                            attack["defender"].name, attack["defender"].owner.unique_id, attack["defender"].armies
-                    ))
-                    conquered, min_moveable_armies = player.combact_by_sea(attack["attacker"], attack["defender"], attacker_armies)
-                    if conquered:
-                        # Move armies from attacker area to conquered
-                        max_moveable_armies = attack["attacker"].armies - attack["armies_to_leave"]
-                        nomads = SPQRisiko.get_movable_armies_by_strategy(player.strategy, min_moveable_armies, max_moveable_armies)
-                        attack["attacker"].armies -= nomads
-                        attack["defender"].armies = nomads
-                        can_draw = True
-                        # Remove from possible attacks all of those containing as defender the conquered territory
-                        # and update the probability
-                        attacks = self.update_attacks(player, attacks, attack_num, attacks_type='by_sea')
-                    else:
-                        attacks = self.update_attacks(player, attacks, attack_num, attacks_type='by_sea')
-                        attack_num += 1
-                else:
-                    attack_num += 1
+            while 0 < len(attacks):
+                attack = attacks[0]
+                # if not attack['defender'].already_attacked_by_sea:
+                attack['defender'].already_attacked_by_sea = True
+                attacker_armies = attack["attacker"].armies - attack["armies_to_leave"]            
+                print('Battle: {} (player {}) with {} VS {} (player {}) with {}'.format(
+                        attack["attacker"].name, player.unique_id, attacker_armies,
+                        attack["defender"].name, attack["defender"].owner.unique_id, attack["defender"].armies
+                ))
+                conquered, min_moveable_armies = player.combact_by_sea(
+                                                    attack["attacker"], 
+                                                    attack["defender"], 
+                                                    attacker_armies
+                                                 )
+                if conquered:
+                    # Move armies from attacker area to conquered
+                    max_moveable_armies = attack["attacker"].armies - attack["armies_to_leave"]
+                    nomads = SPQRisiko.get_movable_armies_by_strategy(player.strategy, min_moveable_armies, max_moveable_armies)
+                    attack["attacker"].armies -= nomads
+                    attack["defender"].armies = nomads
+                    can_draw = True
+                # Remove from possible attacks all of those containing as defender the conquered territory
+                # and update the probability
+                attacks = self.update_attacks_by_sea(player, attacks)
 
 
             # 6) Attacchi terrestri
@@ -492,18 +496,21 @@ class SPQRisiko(Model):
             attacks = []
             attacks = self.get_attackable_ground_areas(player)
             attacks.sort(key=lambda x: x["prob_win"], reverse=True)
-            attack_num = 0
 
-            while attack_num < len(attacks):
-                print('ATTACK NUM: ', attack_num)
-                print('LEN(ATTACKS): ', len(attacks))
-                attack = attacks[attack_num]
+            while 0 < len(attacks):
+                attack = attacks[0]
                 attacker_armies = attack["attacker"].armies - 1                
                 print('Battle: {} (player {}) with {} VS {} (player {}) with {}'.format(
                         attack["attacker"].name, player.unique_id, attacker_armies,
                         attack["defender"].name, attack["defender"].owner.unique_id, attack["defender"].armies
                 ))
-                conquered, min_moveable_armies = player.combact(attack["attacker"], attack["defender"], attacker_armies, self.atta_wins_combact)
+                conquered, min_moveable_armies = player.combact(
+                                                        attack["attacker"], 
+                                                        attack["defender"], 
+                                                        attacker_armies, 
+                                                        SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy), 
+                                                        self.atta_wins_combact
+                                                 )
                 if conquered:
                     # Move armies from attacker area to conquered
                     max_moveable_armies = attack["attacker"].armies - 1
@@ -513,14 +520,9 @@ class SPQRisiko(Model):
                     can_draw = True
                     self.log("{} conquered {} from {} and it moves {} armies there out of {}".format(
                         player.color, attack["defender"].name, attack["attacker"].name, nomads, max_moveable_armies))
-
-                    # Re-sort newly attackable areas with newer probabilities
-                    # attacks = self.get_attackable_ground_areas(player)
-                    # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
-                    attacks = self.update_attacks(player, attacks, attack_num)
-                else:
-                    attacks = self.update_attacks(player, attacks, attack_num)
-                    attack_num += 1
+                # Re-sort newly attackable areas with newer probabilities
+                attacks = self.get_attackable_ground_areas(player)
+                attacks.sort(key=lambda x: x["prob_win"], reverse=True)
 
             # 7) Spostamento strategico di fine turno
             # Move armies from non-attackable ground area (if one) to another one
@@ -550,64 +552,71 @@ class SPQRisiko(Model):
         self.datacollector.collect(self)
         return False
 
-    def update_attacks(self, player, attacks, attack_num, attacks_type='ground'):
-        last_attacker = attacks[attack_num]['attacker']
-        conquered = attacks[attack_num]['defender']
-        del attacks[attack_num]
-        if attacks_type == 'ground':
-            prev_max_attacks = len(attacks)
-            for attack in attacks[attack_num:prev_max_attacks]:
-                if attack['defender'].unique_id == conquered.unique_id:
-                    # print('Since the defender has been conquered, I maybe attack from there')
-                    attackables = self.get_attackable_ground_areas_from(attack['defender'])
-                    if attackables != []:
-                        # print('The attacker can attack from the conquered territory')
-                        for attackable in attackables:
-                            attacks.append(attackable)
-                    else:
-                        # print('The attacker cannot attack from the conquered territory')
+    def update_attacks_by_sea(self, player, future_attacks):
+        attack_num = 0
+        last_attacker = future_attacks[0]['attacker']
+        del future_attacks[0]
+        # if attacks_type == 'ground':
+        #     prev_future_attacks = len(future_attacks)
+        #     while attack_num < prev_future_attacks:
+        #         attack = future_attacks[attack_num]
+        #         if attack['defender'].unique_id == conquered.unique_id:
+        #             # print('Since the defender has been conquered, the attacker maybe attacks from there')
+        #             attackables = self.get_attackable_ground_areas_from(attack['defender'])
+        #             if attackables != []:
+        #                 # print('The attacker can attack from the conquered territory')
+        #                 for attackable in attackables:
+        #                     future_attacks.append(attackable)
+        #             # else:
+        #             #     # print('The attacker cannot attack from the conquered territory')
+        #             #     attack_num += 1
+        #             del future_attacks[attack_num]
+        #         elif attack['attacker'].unique_id == last_attacker.unique_id:
+        #             if attack['attacker'].armies - 1 >= min(3, attack['defender'].armies):
+        #                 prob_win = self.atta_wins_combact_by_sea[attack['attacker'].armies - 2, attack['defender'].armies - 1]
+        #                 if prob_win >= SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy):
+        #                     # print('The attacker can attack again')
+        #                     attack['prob_win'] = prob_win
+        #                     attack_num += 1
+        #                 else:
+        #                     # print('Since the attacker has a lower prob to win, I delete it')
+        #                     del future_attacks[attack_num]
+        #             else:
+        #                 # print('Since the attacker hasn\'t the min required armies, I delete it')
+        #                 del future_attacks[attack_num]
+        #         else:
+        #             attack_num += 1    
+        #     future_attacks.sort(key=lambda x: x["prob_win"], reverse=True)
+        # elif attacks_type == 'by_sea':
+        while attack_num < len(future_attacks):
+            attack = future_attacks[attack_num]
+            if attack['defender'].owner.unique_id == last_attacker.owner.unique_id:
+                print('Since the defender has been conquered, I delete it')
+                del future_attacks[attack_num]
+            elif attack['defender'].already_attacked_by_sea:
+                print('Since the defender has already been attacked by sea, I delete it')
+                del future_attacks[attack_num]
+            elif attack['attacker'].unique_id == last_attacker.unique_id:
+                print('The attacker may attack again')
+                # Maybe it could change the armies to leave due to garrisons
+                armies_to_leave = self.get_armies_to_leave(attack['attacker'])
+                if attack['attacker'].armies - armies_to_leave >= min(3, attack['defender'].armies):
+                    prob_win = self.atta_wins_combact_by_sea[attack['attacker'].armies - armies_to_leave - 1, attack['defender'].armies - 1]
+                    if prob_win >= SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy):
+                        print('The attacker can attack again')
+                        attack['prob_win'] = prob_win
                         attack_num += 1
-                elif attack['attacker'].unique_id == last_attacker.unique_id:
-                    if attack['attacker'].armies - 1 >= min(3, attack['defender'].armies):
-                        prob_win = self.atta_wins_combact_by_sea[attack['attacker'].armies - 2, attack['defender'].armies - 1]
-                        if prob_win >= SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy):
-                            # print('The attacker can attack again')
-                            attack['prob_win'] = prob_win
-                            attack_num += 1
-                        else:
-                            # print('Since the attacker has a lower prob to win, I delete it')
-                            del attacks[attack_num]
                     else:
-                        # print('Since the attacker hasn\'t the min required armies, I delete it')
-                        del attacks[attack_num]
+                        print('Since the attacker has a lower prob to win, I delete it')
+                        del future_attacks[attack_num]
                 else:
-                    attack_num += 1    
-            attacks.sort(key=lambda x: x["prob_win"], reverse=True)
-        elif attacks_type == 'by_sea':
-            for attack in attacks[attack_num:]:
-                if attack['defender'].unique_id == conquered.unique_id:
-                    # print('Since the defender has been conquered, I delete it')
-                    del attacks[attack_num]
-                elif attack['attacker'].unique_id == last_attacker.unique_id:
-                    # Maybe it could change the armies to leave due to garrisons
-                    armies_to_leave = self.get_armies_to_leave(attack['attacker'])
-                    if attack['attacker'].armies - armies_to_leave >= min(3, attack['defender'].armies):
-                        prob_win = self.atta_wins_combact_by_sea[attack['attacker'].armies - armies_to_leave - 1, attack['defender'].armies - 1]
-                        if prob_win >= SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy):
-                            # print('The attacker can attack again')
-                            attack['prob_win'] = prob_win
-                            attack_num += 1
-                        else:
-                            # print('Since the attacker has a lower prob to win, I delete it')
-                            del attacks[attack_num]
-                    else:
-                        # print('Since the attacker hasn\'t the min required armies, I delete it')
-                        del attacks[attack_num]
-                else:
-                    attack_num += 1    
-            attacks.sort(key=lambda x: x["prob_win"] and not x['defender'].already_attacked_by_sea, reverse=True)
+                    print('Since the attacker hasn\'t the min required armies, I delete it')
+                    del future_attacks[attack_num]
+            else:
+                attack_num += 1    
+        future_attacks.sort(key=lambda x: x["prob_win"], reverse=True)
 
-        return attacks
+        return future_attacks
                 
     def get_attackable_ground_areas_by_sea(self, player):
         attacks = []
