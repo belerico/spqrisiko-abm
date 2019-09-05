@@ -42,12 +42,13 @@ class Player(Agent):
         # print('power_places: ', power_places)
 
         m = max(cc_lengths)
-        players_max_empire = [
-            player for player, n_territories
-            in enumerate(cc_lengths) if n_territories == m]
-        if len(players_max_empire) == 1 and players_max_empire[0] == self.unique_id:
-            print('Player ' + str(self.unique_id) + ' gets one victory point for having the maximum empire')
-            self.victory_points += 1
+        if m >= 4:
+            players_max_empire = [
+                player for player, n_territories
+                in enumerate(cc_lengths) if n_territories == m]
+            if len(players_max_empire) == 1 and players_max_empire[0] == self.unique_id:
+                print('Player ' + str(self.unique_id) + ' gets one victory point for having the maximum empire')
+                self.victory_points += 1
 
         m = max(territories_per_players)
         players_max_territories = [

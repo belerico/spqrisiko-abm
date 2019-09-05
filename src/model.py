@@ -92,7 +92,7 @@ class SPQRisiko(Model):
             t = GroundArea(*itemgetter("id", "name", "type", "coords")
                            (self.territories_dict["territories"][node]), model=self)
             if i < 9 * self.n_players:
-                t.armies = random.randint(2, 5)
+                t.armies = 2
                 t.owner = self.players[i % self.n_players]
             else:
                 t.armies = 3
@@ -195,7 +195,7 @@ class SPQRisiko(Model):
             return None
         cards_in_tris = set([card["type"] for card in cards])
         # assert len(cards_in_tris) == 3 or len(cards_in_tris) == 1, \
-        #     "Tris must be composed of three different cards or three of the same type"
+        # Tris must be composed of three different cards or three of the same type
         if len(cards_in_tris) != 3 and len(cards_in_tris) != 1:
             return None
         reinforces = {
@@ -321,7 +321,10 @@ class SPQRisiko(Model):
         territory.found = 1
         for neighbor in self.grid.get_neighbors(territory.unique_id):
             neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-            if isinstance(neighbor, GroundArea) and neighbor.found == 0 and neighbor.owner.unique_id == territory.owner.unique_id:
+            if  isinstance(neighbor, GroundArea) and \
+                neighbor.found == 0 and \
+                neighbor.owner.unique_id == territory.owner.unique_id:
+                
                 d = self.__dfs_visit__(neighbor, d)
         return d + 1
 
@@ -435,7 +438,9 @@ class SPQRisiko(Model):
                     adv_min_trireme = sea_area.trireme.index(min_trireme)
                     # Check if the atta_wins_combact probabilities matrix needs to be recomputed 
                     self.update_atta_wins_combact_matrix(sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme])
-                    if player.unique_id != adv_min_trireme and self.atta_wins_combact[sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme]] >= player.get_aggressivity():
+                    if  player.unique_id != adv_min_trireme and \
+                        self.atta_wins_combact[sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme]] >= SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy):
+                        
                         attackable_sea_areas.append([sea_area, adv_min_trireme])
 
             for sea_area, adv in attackable_sea_areas:
