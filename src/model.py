@@ -300,6 +300,35 @@ class SPQRisiko(Model):
         
         return territories, power_places
 
+    def get_weakest_power_place(self, player):
+        weakest = None
+        for territory in self.ground_areas:
+            if not territory.owner.computer and territory.owner.unique_id == player.unique_id:
+                if territory.power_place:
+                    if not weakest or territory.armies < weakest.armies:
+                        weakest = territory
+        return weakest
+
+    def get_weakest_adversary_power_place(self, player):
+        weakest = None
+        for territory in self.ground_areas:
+            if territory.owner.computer or territory.owner.unique_id != player.unique_id:
+                if territory.power_place:
+                    if not weakest or territory.armies < weakest.armies:
+                        weakest = territory
+        return weakest
+
+    def find_nearest(self, territory, player):
+        visited = set()
+        neighbors = []
+        for neighbor in self.grid.get_neighbors(territory.unique_id):
+            neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+            if neighbor.unique_id not in visited:
+                if neighbor.owner.unique_id == player.unique_id:
+                    return neighbor
+
+
+
     def maximum_empires(self):
         # It's a DFS visit in which we account for
         # the length of every connected components
@@ -353,18 +382,57 @@ class SPQRisiko(Model):
         elif reinforce_type == "triremes":
             territories = self.get_territories_by_player(player, "sea")
             if len(territories) > 0:
-                random_territory = self.random.randint(0, len(territories) - 1)
-                territories[random_territory].trireme[self.players.index(player)] += armies
+                if player.goal != "LA":
+                    random_territory = self.random.randint(0, len(territories) - 1)
+                    territories[random_territory].trireme[self.players.index(player)] += armies
+                else:  # Put reinforces on sea area with the lowest number of armies
+                    lowest_territory = None
+                    low = 0
+                    for sea in territories:
+                        if not lowest_territory or low > sea.trireme[self.players.index(player)]:
+                            low = sea.trireme[self.players.index(player)]
+                            lowest_territory = sea
+                    if lowest_territory:
+                        lowest_territory.trireme[self.players.index(player)] += armies
                 print('Player ' + str(player.unique_id) + ' gets ' + str(armies) + ' triremes')
         else:
             territories = self.get_territories_by_player(player, "ground")
             if len(territories) > 0:
-                random_territory = self.random.randint(0, len(territories) - 1)
                 if reinforce_type == "legionaries":
-                    territories[random_territory].armies += armies
-                    print('Player ' + str(player.unique_id) + ' gets ' + str(armies) + ' legionaries')
-                else:
-                    territories[random_territory].power_place = True
+                    # Play legionaries by strategy
+                    if player.goal == "PP":
+                        # Reinforce (if existing) the weakest power place territory
+                        pp = self.get_weakest_power_place(player)
+                        if pp:
+                            pp_armies = round(min(strategies["PP"]["armies_on_weakest_power_place"] * armies, 1))
+                            armies -= pp_armies
+                            pp.armies += pp_armies
+                        # Reinforce territory near adversary power_place
+                        pp = self.get_weakest_adversary_power_place(player)
+                        if not pp:
+                            idx = self.random.randint(0, len(territories) - 1)
+                            territories[idx].armies += armies
+                        else:
+                            # Find nearest territory to that power place and reinforce it
+                            nearest = self.find_nearest(pp, player)
+                else:  # Put Power place by goal
+                    if player.goal != "PP":
+                        idx = self.random.randint(0, len(territories) - 1)
+                        territories[idx].power_place = True
+                    else:
+                        non_attackables = self.non_attackable_areas(player)
+                        if len(non_attackables) > 0:
+                            idx = 0  # Put power place in the first non attackable ground area
+                            non_attackables[idx].power_place = True
+                        else:
+                            highest_armies_territory = None
+                            high = 0
+                            for terr in territories:
+                                if terr.armies > high or (highest_armies_territory and highest_armies_territory.power_place == False):
+                                    high = terr.armies
+                                    highest_armies_territory = terr
+                            if highest_armies_territory:
+                                highest_armies_territory.power_place = True
                     print('Player ' + str(player.unique_id) + ' gets a power place')
 
     def get_territories_by_player(self, player: Player, ground_type="ground"):
@@ -394,6 +462,7 @@ class SPQRisiko(Model):
         for player in self.players:
             can_draw = False
             territories, power_places = self.count_players_territories_power_places()
+            player_territories = self.get_territories_by_player(player, "ground")
             sea_areas = self.count_players_sea_areas()
             empires = self.maximum_empires()
 
@@ -409,7 +478,7 @@ class SPQRisiko(Model):
             # 2) Fase dei rinforzi
             print('\n\nREINFORCES')
             player.update_ground_reinforces_power_places()
-            reinforces = player.get_ground_reinforces(territories)
+            reinforces = Player.get_ground_reinforces(player_territories)
             self.log("{} earns {} legionaries (he owns {} territories)".format(player.color, reinforces, territories[player.unique_id]))
             self.put_reinforces(player, reinforces)
             # player.sacrifice_trireme(sea_area_from, ground_area_to)
@@ -652,17 +721,12 @@ class SPQRisiko(Model):
         return attacks
 
     def get_armies_to_leave(self, ground_area):
-        has_enemies = False
         ground_area_neighbors = self.grid.get_neighbors(ground_area.unique_id)
         for ground_area_neighbor in ground_area_neighbors:
             ground_area_neighbor = self.grid.get_cell_list_contents([ground_area_neighbor])[0]
             if isinstance(ground_area_neighbor, GroundArea) and ground_area_neighbor.owner.unique_id != ground_area.owner.unique_id:
-                has_enemies = True
-                break
-        if has_enemies:
-            return 2
-        else:
-            return 1
+                return 2
+        return 1
     
     def get_attackable_ground_areas_from(self, ground_area):
         attacks = []

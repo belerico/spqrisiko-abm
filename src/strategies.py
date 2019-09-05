@@ -9,8 +9,9 @@ probs_win = {
 strategies = {
     "PP": {  # PP = Control as many Power Places as possible
         "tris": [1, 1, 10],
-        "power_places_multiplier": 1.3  # or we can make it as a multiplier,
+        "power_places_multiplier": 1.3,  # or we can make it as a multiplier,
         # so territories with power places are more frequently attacked than others
+        "armies_on_weakest_power_place": 0.2
     },
     "BE": {  # BE = Biggest Empire (adjacent ground areas)
         "tris": [2, 1, 1],
