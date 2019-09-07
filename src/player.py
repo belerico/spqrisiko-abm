@@ -1,6 +1,9 @@
 import math
 import random
 import operator
+import itertools
+
+from .strategies import strategies
 from . import constants
 from .markov import get_probabilities_ground_combact
 from .territory import GroundArea, SeaArea
@@ -228,3 +231,127 @@ class Player(Agent):
             print('Attacker must attack with a number of armies that are greater or equal to the number of defender\'s armies. Combact done!')
 
         return conquered, min(3, attacker_armies)
+
+    def play_tris(self, model, tris):
+        reinforces = model.reinforces_from_tris(tris)
+        # remove cards from player and put in trash deck
+        for card in tris:
+            card = self.cards.pop([i for i, n in enumerate(self.cards) if n["type"] == card["type"]][0])
+            model.trashed_cards.append(card)
+        return reinforces
+
+    def get_best_tris(self, model):
+        if len(self.cards) < 3:
+            return None
+        best_tris = None
+        # Get all possible reinforces combination from tris from cards
+        all_tris = [list(t) for t in itertools.combinations(self.cards, 3)]
+        all_reinforces = [model.reinforces_from_tris(tris) for tris in all_tris]
+
+        # Remove None from list
+        real_tris = [all_tris[i] for i in range(len(all_reinforces)) if all_reinforces[i]]
+        all_reinforces = [i for i in all_reinforces if i]
+        if len(all_reinforces) == 0:
+            return None
+
+        named_tris = []
+        for tris in real_tris:
+            named_tris.append(model.get_tris_name(tris))
+        highest_score = 0
+        i = -1
+        for i, name in enumerate(named_tris):
+            score = model.reinforces_by_goal[name][self.goal]
+            if highest_score < score:
+                index = i
+                highest_score = score
+
+        best_tris = real_tris[i]
+        # Play tris if it is a convenient tris (it is in the first half of tris ordered by score)
+        return best_tris if model.tris_by_goal[self.goal].index(model.get_tris_name(tris)) <= len(model.tris_by_goal[self.goal]) / 2 else None
+
+    # Move armies from non attackable area to attackable neighbor based on armies:
+    # "Aggressive" -> higher # of armies
+    # "Passive" -> lower # of armies
+    # "Neutral" -> random
+    def move_armies_strategy_based(self, model, area_from):
+        attackable_neighbors = []
+        for neighbor in model.grid.get_neighbors(area_from.unique_id):
+            neighbor = model.grid.get_cell_list_contents([neighbor])[0]
+            if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id != area_from.owner.unique_id:
+                if not model.is_not_attackable(neighbor, self):
+                    attackable_neighbors.append(neighbor)
+        if len(attackable_neighbors) == 0:
+            return False
+
+        attackable_neighbors.sort(key=lambda x: x.armies, reverse=True)
+        if self.strategy == "Aggressive":
+            area_to = attackable_neighbors[0]
+        elif self.strategy == "Neutral":
+            area_to = random.choice(attackable_neighbors)
+        else:
+            area_to = attackable_neighbors[-1]
+
+        area_to.armies += area_from.armies - 1
+        area_from.armies = 1
+        return True
+
+    def put_reinforces(self, model, armies, reinforce_type="legionaries"):
+        if isinstance(armies, dict):
+            for key, value in armies.items():
+                self.put_reinforces(model, value, key)
+        # TODO: put by goals
+        elif reinforce_type == "triremes":
+            territories = model.get_territories_by_player(self, "sea")
+            if len(territories) > 0:
+                if self.goal != "LA":
+                    random_territory = model.random.randint(0, len(territories) - 1)
+                    territories[random_territory].trireme[model.players.index(self)] += armies
+                else:  # Put reinforces on sea area with the lowest number of armies
+                    lowest_territory = None
+                    low = 0
+                    for sea in territories:
+                        if not lowest_territory or low > sea.trireme[model.players.index(self)]:
+                            low = sea.trireme[model.players.index(self)]
+                            lowest_territory = sea
+                    if lowest_territory:
+                        lowest_territory.trireme[model.players.index(self)] += armies
+                print('Player ' + str(self.unique_id) + ' gets ' + str(armies) + ' triremes')
+        else:
+            territories = model.get_territories_by_player(self, "ground")
+            if len(territories) > 0:
+                if reinforce_type == "legionaries":
+                    # Play legionaries by strategy
+                    if self.goal == "PP":
+                        # Reinforce (if existing) the weakest power place territory
+                        pp = model.get_weakest_power_place(self)
+                        if pp:
+                            pp_armies = round(min(strategies["PP"]["armies_on_weakest_power_place"] * armies, 1))
+                            armies -= pp_armies
+                            pp.armies += pp_armies
+                        # Reinforce territory near adversary power_place
+                        pp = model.get_weakest_adversary_power_place(self)
+                        if not pp:
+                            idx = model.random.randint(0, len(territories) - 1)
+                            territories[idx].armies += armies
+                        else:
+                            # Find nearest territory to that power place and reinforce it
+                            nearest = model.find_nearest(pp, self)
+                else:  # Put Power place by goal
+                    if self.goal != "PP":
+                        idx = model.random.randint(0, len(territories) - 1)
+                        territories[idx].power_place = True
+                    else:
+                        non_attackables = model.non_attackable_areas(self)
+                        if len(non_attackables) > 0:
+                            idx = 0  # Put power place in the first non attackable ground area
+                            non_attackables[idx].power_place = True
+                        else:
+                            highest_armies_territory = None
+                            high = 0
+                            for terr in territories:
+                                if terr.armies > high or (highest_armies_territory and highest_armies_territory.power_place == False):
+                                    high = terr.armies
+                                    highest_armies_territory = terr
+                            if highest_armies_territory:
+                                highest_armies_territory.power_place = True
+                    print('Player ' + str(self.unique_id) + ' gets a power place')
