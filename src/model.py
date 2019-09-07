@@ -53,7 +53,7 @@ class SPQRisiko(Model):
         self.G, self.territories_dict = self.create_graph_map()
         self.grid = NetworkGrid(self.G)
         self.datacollector = DataCollector(model_reporters={
-                                              "Armies": get_n_armies_by_player,
+                                              "Armies": SPQRisiko.get_n_armies_by_player,
                                               "Cards": lambda m: len(m.deck),
                                               "Trash": lambda m: len(m.trashed_cards)
                                             },
@@ -110,6 +110,9 @@ class SPQRisiko(Model):
             self.grid.place_agent(t, node)
             self.sea_areas.append(self.grid.get_cell_list_contents([node])[0])
 
+        self.ground_areas.sort(key=lambda x: x.unique_id)
+        self.sea_areas.sort(key=lambda x: x.unique_id)
+        
         self.running = True
         self.datacollector.collect(self)
 
@@ -217,17 +220,17 @@ class SPQRisiko(Model):
         all_reinforces = [i for i in all_reinforces if i]
         named_tris = {}
         for i, tris in enumerate(real_tris):
-            name = get_tris_name(tris)
+            name = self.get_tris_name(tris)
             named_tris[name] = all_reinforces[i]
             self.reinforces_by_goal[name] = {}
             for goal, value in strategies.items():
-                self.reinforces_by_goal[name][goal] = get_reinforcements_score(all_reinforces[i], value["tris"])
+                self.reinforces_by_goal[name][goal] = self.get_reinforcements_score(all_reinforces[i], value["tris"])
 
         # order tris name by score
         for goal, value in strategies.items():
             self.tris_by_goal[goal] = []
             for tris in real_tris:
-                name = get_tris_name(tris)
+                name = self.get_tris_name(tris)
                 if name not in self.tris_by_goal[goal]:
                     self.tris_by_goal[goal].append(name)
             self.tris_by_goal[goal] = sorted(self.tris_by_goal[goal], key=cmp_to_key(lambda a, b: self.reinforces_by_goal[b][goal] - self.reinforces_by_goal[a][goal]))
@@ -237,10 +240,10 @@ class SPQRisiko(Model):
             sum, count = 0, 0
             for tris in real_tris:
                 count += 1
-                sum += self.reinforces_by_goal[get_tris_name(tris)][goal]
+                sum += self.reinforces_by_goal[self.get_tris_name(tris)][goal]
             self.reinforces_by_goal["average"][goal] = float(sum) / count
 
-    def get_best_tris(self, cards, player):
+    """ def get_best_tris(self, cards, player):
         if len(cards) < 3:
             return None
         best_tris = None
@@ -267,15 +270,15 @@ class SPQRisiko(Model):
 
         best_tris = real_tris[i]
         # Play tris if it is a convenient tris (it is in the first half of tris ordered by score)
-        return best_tris if self.tris_by_goal[player.goal].index(get_tris_name(tris)) <= len(self.tris_by_goal[player.goal]) / 2 else None
+        return best_tris if self.tris_by_goal[player.goal].index(get_tris_name(tris)) <= len(self.tris_by_goal[player.goal]) / 2 else None """
 
-    def play_tris(self, tris, player):
+    """ def play_tris(self, tris, player):
         reinforces = self.reinforces_from_tris(tris)
         # remove cards from player and put in trash deck
         for card in tris:
             card = player.cards.pop([i for i, n in enumerate(player.cards) if n["type"] == card["type"]][0])
             self.trashed_cards.append(card)
-        return reinforces
+        return reinforces """
 
     def count_players_sea_areas(self):
         sea_areas = [0] * self.n_players
@@ -319,15 +322,28 @@ class SPQRisiko(Model):
         return weakest
 
     def find_nearest(self, territory, player):
-        visited = set()
-        neighbors = []
-        for neighbor in self.grid.get_neighbors(territory.unique_id):
-            neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-            if neighbor.unique_id not in visited:
-                if neighbor.owner.unique_id == player.unique_id:
-                    return neighbor
+        # It's a BFS visit to get the node whose distance from territory is the lesser than any other
+        for ground_area in self.ground_areas:
+            ground_area.found = 0
+        for sea_area in self.sea_areas:
+            sea_area.found = 0
 
+        territory.found = 1
+        visited = [territory]
+        distances = [0] * 57
 
+        while len(visited) > 0:
+            t = visited.pop(0)
+            for neighbor in self.grid.get_neighbors(t.unique_id):
+                neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+                if neighbor.found == 0:
+                    neighbor.found = 1
+                    distances[neighbor.unique_id] = distances[t.unique_id] + 1
+                    visited.append(neighbor)
+                    if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id == player.unique_id:
+                        return neighbor
+
+        return None
 
     def maximum_empires(self):
         # It's a DFS visit in which we account for
@@ -374,7 +390,7 @@ class SPQRisiko(Model):
         won = True if max_points > self.points_limit else False
         return max_player, won
 
-    def put_reinforces(self, player, armies, reinforce_type="legionaries"):
+    """ def put_reinforces(self, player, armies, reinforce_type="legionaries"):
         if isinstance(armies, dict):
             for key, value in armies.items():
                 self.put_reinforces(player, value, key)
@@ -433,7 +449,7 @@ class SPQRisiko(Model):
                                     highest_armies_territory = terr
                             if highest_armies_territory:
                                 highest_armies_territory.power_place = True
-                    print('Player ' + str(player.unique_id) + ' gets a power place')
+                    print('Player ' + str(player.unique_id) + ' gets a power place') """
 
     def get_territories_by_player(self, player: Player, ground_type="ground"):
         if ground_type == "ground":
@@ -460,6 +476,7 @@ class SPQRisiko(Model):
     def step(self):
         self.current_turn += 1
         for player in self.players:
+
             can_draw = False
             territories, power_places = self.count_players_territories_power_places()
             player_territories = self.get_territories_by_player(player, "ground")
@@ -480,17 +497,17 @@ class SPQRisiko(Model):
             player.update_ground_reinforces_power_places()
             reinforces = Player.get_ground_reinforces(player_territories)
             self.log("{} earns {} legionaries (he owns {} territories)".format(player.color, reinforces, territories[player.unique_id]))
-            self.put_reinforces(player, reinforces)
+            player.put_reinforces(self, reinforces)
             # player.sacrifice_trireme(sea_area_from, ground_area_to)
 
             # use card combination
             # displace ground, naval and/or power places on the ground
-            tris = self.get_best_tris(player.cards, player)
+            tris = player.get_best_tris(self)
 
             if tris:
-                reinforces = self.play_tris(tris, player)
-                self.log("{} play tris {}".format(player.color, get_tris_name(tris)))
-                self.put_reinforces(player, reinforces)
+                reinforces = player.play_tris(self, tris)
+                self.log("{} play tris {}".format(player.color, self.get_tris_name(tris)))
+                player.put_reinforces(self, reinforces)
                 # TODO: log where reinforces are put
 
             # 3) Movimento navale
@@ -608,7 +625,7 @@ class SPQRisiko(Model):
                 while not moved and i < len(non_attackables):
                     non_attackable = non_attackables[i]
                     # Based on strategy move armies to neighbor to get higher units
-                    moved = self.move_armies_strategy_based(player, non_attackable)
+                    moved = player.move_armies_strategy_based(self, non_attackable)
                     i += 1
 
 
@@ -630,38 +647,6 @@ class SPQRisiko(Model):
         attack_num = 0
         last_attacker = future_attacks[0]['attacker']
         del future_attacks[0]
-        # if attacks_type == 'ground':
-        #     prev_future_attacks = len(future_attacks)
-        #     while attack_num < prev_future_attacks:
-        #         attack = future_attacks[attack_num]
-        #         if attack['defender'].unique_id == conquered.unique_id:
-        #             # print('Since the defender has been conquered, the attacker maybe attacks from there')
-        #             attackables = self.get_attackable_ground_areas_from(attack['defender'])
-        #             if attackables != []:
-        #                 # print('The attacker can attack from the conquered territory')
-        #                 for attackable in attackables:
-        #                     future_attacks.append(attackable)
-        #             # else:
-        #             #     # print('The attacker cannot attack from the conquered territory')
-        #             #     attack_num += 1
-        #             del future_attacks[attack_num]
-        #         elif attack['attacker'].unique_id == last_attacker.unique_id:
-        #             if attack['attacker'].armies - 1 >= min(3, attack['defender'].armies):
-        #                 prob_win = self.atta_wins_combact_by_sea[attack['attacker'].armies - 2, attack['defender'].armies - 1]
-        #                 if prob_win >= SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy):
-        #                     # print('The attacker can attack again')
-        #                     attack['prob_win'] = prob_win
-        #                     attack_num += 1
-        #                 else:
-        #                     # print('Since the attacker has a lower prob to win, I delete it')
-        #                     del future_attacks[attack_num]
-        #             else:
-        #                 # print('Since the attacker hasn\'t the min required armies, I delete it')
-        #                 del future_attacks[attack_num]
-        #         else:
-        #             attack_num += 1    
-        #     future_attacks.sort(key=lambda x: x["prob_win"], reverse=True)
-        # elif attacks_type == 'by_sea':
         while attack_num < len(future_attacks):
             attack = future_attacks[attack_num]
             if attack['defender'].owner.unique_id == last_attacker.owner.unique_id:
@@ -790,7 +775,7 @@ class SPQRisiko(Model):
 
         return False
 
-    # Move armies from non attackable area to attackable neighbor based on armies:
+    """ # Move armies from non attackable area to attackable neighbor based on armies:
     # "Aggressive" -> higher # of armies
     # "Passive" -> lower # of armies
     # "Neutral" -> random
@@ -814,7 +799,7 @@ class SPQRisiko(Model):
 
         area_to.armies += area_from.armies - 1
         area_from.armies = 1
-        return True
+        return True """
 
     def log(self, log):
         self.journal.append("Turn {}: ".format(self.current_turn) + log)
@@ -823,22 +808,21 @@ class SPQRisiko(Model):
         for _ in range(n):
             self.step()
 
+    # Tris name is the ordered initial letters of cards type
+    def get_tris_name(self, tris):
+        if len(tris) != 3:
+            raise Exception("tris name parameter error")
+        return "-".join([card[0] for card in sorted(set([card["type"] for card in tris]))])
 
-def get_n_armies_by_player(model, player=None):
-    if player is not None:
-        return sum([t.armies for t in model.get_territories_by_player(player)])
-    else:
-        sum_a = 0
-        for player in model.players:
-            sum_a += sum([t.armies for t in model.get_territories_by_player(player)])
-        return sum_a / len(model.players)
+    def get_reinforcements_score(self, reinforces, multipliers):
+        m, r = multipliers, reinforces
+        return m[0]*r["legionaries"] + m[1]*r["triremes"] + m[2]*r["centers"]
 
-# Tris name is the ordered initial letters of cards type
-def get_tris_name(tris):
-    if len(tris) != 3:
-        raise Exception("tris name parameter error")
-    return "-".join([card[0] for card in sorted(set([card["type"] for card in tris]))])
-
-def get_reinforcements_score(reinforces, multipliers):
-    m, r = multipliers, reinforces
-    return m[0]*r["legionaries"] + m[1]*r["triremes"] + m[2]*r["centers"]
+    def get_n_armies_by_player(self, player=None):
+        if player is not None:
+            return sum([t.armies for t in self.get_territories_by_player(player)])
+        else:
+            sum_a = 0
+            for player in self.players:
+                sum_a += sum([t.armies for t in self.get_territories_by_player(player)])
+            return sum_a / len(self.players)
