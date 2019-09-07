@@ -5,11 +5,10 @@ import networkx as nx
 import random
 import collections, itertools
 
-from . import constants
+from . import constants, strategies
 from .markov import get_probabilities_ground_combact, get_probabilities_combact_by_sea
 from .territory import GroundArea, SeaArea
 from .player import Player
-from .strategies import strategies
 from . import markov
 
 from operator import itemgetter
@@ -124,19 +123,10 @@ class SPQRisiko(Model):
         self.datacollector.collect(self)
 
     def get_strategy_setup(self, strategy):
-        strategies = ["Aggressive", "Passive", "Neutral"]
+        strats = ["Aggressive", "Passive", "Neutral"]
         if strategy == "Random":
-            strategy = self.random.choice(strategies)
+            strategy = self.random.choice(strats)
         return strategy
-
-    @staticmethod
-    def get_win_probability_threshold_from_strategy(strategy):
-        probs = {
-            "Passive": 0.7,
-            "Neutral": 0.62,
-            "Aggressive": 0.55
-        }
-        return probs[strategy]
 
     @staticmethod
     def get_movable_armies_by_strategy(strategy, minimum, maximum):
@@ -230,11 +220,11 @@ class SPQRisiko(Model):
             name = self.get_tris_name(tris)
             named_tris[name] = all_reinforces[i]
             self.reinforces_by_goal[name] = {}
-            for goal, value in strategies.items():
+            for goal, value in strategies.strategies.items():
                 self.reinforces_by_goal[name][goal] = self.get_reinforcements_score(all_reinforces[i], value["tris"])
 
         # order tris name by score
-        for goal, value in strategies.items():
+        for goal, value in strategies.strategies.items():
             self.tris_by_goal[goal] = []
             for tris in real_tris:
                 name = self.get_tris_name(tris)
@@ -243,7 +233,7 @@ class SPQRisiko(Model):
             self.tris_by_goal[goal] = sorted(self.tris_by_goal[goal], key=cmp_to_key(lambda a, b: self.reinforces_by_goal[b][goal] - self.reinforces_by_goal[a][goal]))
 
         self.reinforces_by_goal["average"] = {}
-        for goal, value in strategies.items():
+        for goal, value in strategies.strategies.items():
             sum, count = 0, 0
             for tris in real_tris:
                 count += 1
@@ -436,7 +426,7 @@ class SPQRisiko(Model):
                     # Check if the atta_wins_combact probabilities matrix needs to be recomputed 
                     self.update_atta_wins_combact_matrix(sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme])
                     if  player.unique_id != adv_min_trireme and \
-                        self.atta_wins_combact[sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme]] >= SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy):
+                        self.atta_wins_combact[sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme]] >= strategies.probs_win[player.strategy]:
                         
                         attackable_sea_areas.append([sea_area, adv_min_trireme])
 
@@ -453,7 +443,7 @@ class SPQRisiko(Model):
                     sea_area, 
                     adv, 
                     attacker_trireme, 
-                    SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy), 
+                    strategies.probs_win[player.strategy],
                     self.atta_wins_combact
                 )
 
@@ -510,7 +500,7 @@ class SPQRisiko(Model):
                                                         attack["attacker"], 
                                                         attack["defender"], 
                                                         attacker_armies, 
-                                                        SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy), 
+                                                        strategies.probs_win[player.strategy],
                                                         self.atta_wins_combact
                                                  )
                 if conquered:
@@ -572,7 +562,7 @@ class SPQRisiko(Model):
                 armies_to_leave = self.get_armies_to_leave(attack['attacker'])
                 if attack['attacker'].armies - armies_to_leave >= min(3, attack['defender'].armies):
                     prob_win = self.atta_wins_combact_by_sea[attack['attacker'].armies - armies_to_leave - 1, attack['defender'].armies - 1]
-                    if prob_win >= SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy):
+                    if prob_win >= strategies.probs_win[player.strategy]:
                         print('The attacker can attack again')
                         attack['prob_win'] = prob_win
                         attack_num += 1
@@ -607,7 +597,7 @@ class SPQRisiko(Model):
                             if ground_area.armies - armies_to_leave >= min(3, sea_area_neighbor.armies):
                                 self.update_atta_wins_combact_matrix(ground_area.armies - armies_to_leave, sea_area_neighbor.armies, mat_type='combact_by_sea')
                                 prob_win = self.atta_wins_combact_by_sea[ground_area.armies - armies_to_leave - 1, sea_area_neighbor.armies - 1]
-                                if prob_win >= SPQRisiko.get_win_probability_threshold_from_strategy(player.strategy):
+                                if prob_win >= strategies.probs_win[player.strategy]:
                                     attacks.append({
                                         "defender": sea_area_neighbor,
                                         "attacker": ground_area,
@@ -635,7 +625,7 @@ class SPQRisiko(Model):
                     
                     self.update_atta_wins_combact_matrix(ground_area.armies - 1, neighbor.armies)
                     prob_win = self.atta_wins_combact[ground_area.armies - 2, neighbor.armies - 1]
-                    if prob_win >= SPQRisiko.get_win_probability_threshold_from_strategy(ground_area.owner.strategy):
+                    if prob_win >= strategies.probs_win[ground_area.owner.strategy]:
                         attacks.append({
                             "defender": neighbor,
                             "attacker": ground_area,

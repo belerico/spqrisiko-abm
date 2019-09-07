@@ -338,6 +338,30 @@ class Player(Agent):
                             nearest = model.find_nearest(pp, self)
                             if nearest is not None:
                                 nearest.armies += armies
+                    elif self.goal == "LA":
+                        if self.strategy == "Passive" or self.strategy == "Neutral":  # Reinforce weakest territory
+                            lowest_territory = None
+                            low = 0
+                            for ground in territories:
+                                if not lowest_territory or low > ground.armies:
+                                    low = ground.armies
+                                    lowest_territory = ground
+                            if lowest_territory:
+                                if self.strategy == "Neutral":
+                                    add = round(armies / 2)
+                                    armies -= add
+                                lowest_territory.armies += add
+                        if self.strategy == "Aggressive" or self.strategy == "Neutral":  # Reinforce strongest territory
+                            strongest = None
+                            strong = 0
+                            for ground in territories:
+                                if not strongest or strong < ground.armies:
+                                    strong = ground.armies
+                                    strongest = ground
+                            if strongest:
+                                strongest.armies += armies
+
+                    print('Player ' + str(self.unique_id) + ' gets ' + str(armies) + ' armies')
                 else:  # Put Power place by goal
                     if self.goal != "PP":
                         idx = model.random.randint(0, len(territories) - 1)

@@ -1,8 +1,8 @@
 probs_win = {
-    "Passive": 0.7,
-    "Neutral": 0.62,
-    "Aggressive": 0.55,
-    "Very Aggressive": 0.5
+    "Passive": 0.65,
+    "Neutral": 0.6,
+    "Aggressive": 0.5,
+    "Very Aggressive": 0.4
 }
 
 # "tris": list of reinforcements weights, in order legionaries, triremes and power places
