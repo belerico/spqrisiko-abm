@@ -405,167 +405,169 @@ class SPQRisiko(Model):
     def step(self):
         self.current_turn += 1
         for player in self.players:
+            if not player.eliminated:
+                can_draw = False
+                territories, power_places = self.count_players_territories_power_places()
+                player_territories = self.get_territories_by_player(player, "ground")
+                sea_areas = self.count_players_sea_areas()
+                empires = self.maximum_empires()
 
-            can_draw = False
-            territories, power_places = self.count_players_territories_power_places()
-            player_territories = self.get_territories_by_player(player, "ground")
-            sea_areas = self.count_players_sea_areas()
-            empires = self.maximum_empires()
+                # 1) Aggiornamento del punteggio
+                player.update_victory_points(empires, territories, sea_areas, power_places)
 
-            # 1) Aggiornamento del punteggio
-            player.update_victory_points(empires, territories, sea_areas, power_places)
+                # 1.1) Controllo vittoria
+                if self.winner(player):
+                    self.running = False
+                    self.log("{} has won!".format(player.color))
+                    return True
 
-            # 1.1) Controllo vittoria
-            if self.winner(player):
-                self.running = False
-                self.log("{} has won!".format(player.color))
-                return True
-
-            # 2) Fase dei rinforzi
-            print('\n\nREINFORCES')
-            player.update_ground_reinforces_power_places()
-            reinforces = Player.get_ground_reinforces(player_territories)
-            self.log("{} earns {} legionaries (he owns {} territories)".format(player.color, reinforces, territories[player.unique_id]))
-            player.put_reinforces(self, reinforces)
-            # player.sacrifice_trireme(sea_area_from, ground_area_to)
-
-            # use card combination
-            # displace ground, naval and/or power places on the ground
-            tris = player.get_best_tris(self)
-
-            if tris:
-                reinforces = player.play_tris(self, tris)
-                self.log("{} play tris {}".format(player.color, self.get_tris_name(tris)))
+                # 2) Fase dei rinforzi
+                print('\n\nREINFORCES')
+                player.update_ground_reinforces_power_places()
+                reinforces = Player.get_ground_reinforces(player_territories)
+                self.log("{} earns {} legionaries (he owns {} territories)".format(player.color, reinforces, territories[player.unique_id]))
                 player.put_reinforces(self, reinforces)
-                # TODO: log where reinforces are put
+                # player.sacrifice_trireme(sea_area_from, ground_area_to)
 
-            # 3) Movimento navale
-            # player.naval_movement(sea_area_from, sea_area_to, n_trireme)
+                # use card combination
+                # displace ground, naval and/or power places on the ground
+                tris = player.get_best_tris(self)
 
-            # 4) Combattimento navale
-            print('\n\nNAVAL COMBACT!!')
-            # Get all sea_areas that the current player can attack
-            attackable_sea_areas = []
-            for sea_area in self.get_territories_by_player(player, ground_type='sea'):
-                # Choose the adversary that has the lower probability of winning the combact
-                min_trireme = min(sea_area.trireme)
-                if min_trireme > 0:
-                    adv_min_trireme = sea_area.trireme.index(min_trireme)
-                    # Check if the atta_wins_combact probabilities matrix needs to be recomputed 
-                    self.update_atta_wins_combact_matrix(sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme])
-                    if  player.unique_id != adv_min_trireme and \
-                        self.atta_wins_combact[sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme]] >= strategies.probs_win[player.strategy]:
-                        
-                        attackable_sea_areas.append([sea_area, adv_min_trireme])
+                if tris:
+                    reinforces = player.play_tris(self, tris)
+                    self.log("{} play tris {}".format(player.color, self.get_tris_name(tris)))
+                    player.put_reinforces(self, reinforces)
+                    # TODO: log where reinforces are put
 
-            for sea_area, adv in attackable_sea_areas:
-                # Randomly select how many attack and defense trireme
-                attacker_trireme = sea_area.trireme[player.unique_id]
-                # The defender must always use the maximux number of armies to defend itself
-                # n_defense_trireme = sea_area.trireme[adversary.unique_id] if sea_area.trireme[adversary.unique_id] <= 3 else 3
-                # Let's combact biatch!!
-                print('Start battle!')
-                print('Trireme in ' + sea_area.name + ': ', sea_area.trireme)
-                print('Player ' + str(player.unique_id) + ' attacks Player ' + str(adv) + ' on ' + sea_area.name)
-                player.naval_combact(
-                    sea_area, 
-                    adv, 
-                    attacker_trireme, 
-                    strategies.probs_win[player.strategy],
-                    self.atta_wins_combact
-                )
+                # 3) Movimento navale
+                # player.naval_movement(sea_area_from, sea_area_to, n_trireme)
 
-            # 5) Attacchi via mare
-            print('\n\nCOMBACT BY SEA!!')
-            
-            for ground_area in self.ground_areas:
-                ground_area.already_attacked_by_sea = False
+                # 4) Combattimento navale
+                print('\n\nNAVAL COMBACT!!')
+                # Get all sea_areas that the current player can attack
+                attackable_sea_areas = []
+                for sea_area in self.get_territories_by_player(player, ground_type='sea'):
+                    # Choose the adversary that has the lower probability of winning the combact
+                    min_trireme = min(sea_area.trireme)
+                    if min_trireme > 0:
+                        adv_min_trireme = sea_area.trireme.index(min_trireme)
+                        # Check if the atta_wins_combact probabilities matrix needs to be recomputed 
+                        self.update_atta_wins_combact_matrix(sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme])
+                        if  player.unique_id != adv_min_trireme and \
+                            self.atta_wins_combact[sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme]] >= strategies.probs_win[player.strategy]:
+                            
+                            attackable_sea_areas.append([sea_area, adv_min_trireme])
 
-            attacks = self.get_attackable_ground_areas_by_sea(player)
-            attacks.sort(key=lambda x: x["prob_win"], reverse=True)
+                for sea_area, adv in attackable_sea_areas:
+                    # Randomly select how many attack and defense trireme
+                    attacker_trireme = sea_area.trireme[player.unique_id]
+                    # The defender must always use the maximux number of armies to defend itself
+                    # n_defense_trireme = sea_area.trireme[adversary.unique_id] if sea_area.trireme[adversary.unique_id] <= 3 else 3
+                    # Let's combact biatch!!
+                    print('Start battle!')
+                    print('Trireme in ' + sea_area.name + ': ', sea_area.trireme)
+                    print('Player ' + str(player.unique_id) + ' attacks Player ' + str(adv) + ' on ' + sea_area.name)
+                    player.naval_combact(
+                        sea_area, 
+                        adv, 
+                        attacker_trireme, 
+                        strategies.probs_win[player.strategy],
+                        self.atta_wins_combact
+                    )
 
-            while 0 < len(attacks):
-                attack = attacks[0]
-                # if not attack['defender'].already_attacked_by_sea:
-                attack['defender'].already_attacked_by_sea = True
-                attacker_armies = attack["attacker"].armies - attack["armies_to_leave"]            
-                print('Battle: {} (player {}) with {} VS {} (player {}) with {}'.format(
-                        attack["attacker"].name, player.unique_id, attacker_armies,
-                        attack["defender"].name, attack["defender"].owner.unique_id, attack["defender"].armies
-                ))
-                conquered, min_moveable_armies = player.combact_by_sea(
-                                                    attack["attacker"], 
-                                                    attack["defender"], 
-                                                    attacker_armies
-                                                 )
-                if conquered:
-                    # Move armies from attacker area to conquered
-                    max_moveable_armies = attack["attacker"].armies - attack["armies_to_leave"]
-                    nomads = SPQRisiko.get_movable_armies_by_strategy(player.strategy, min_moveable_armies, max_moveable_armies)
-                    attack["attacker"].armies -= nomads
-                    attack["defender"].armies = nomads
-                    can_draw = True
-                # Remove from possible attacks all of those containing as defender the conquered territory
-                # and update the probability
-                attacks = self.update_attacks_by_sea(player, attacks)
+                # 5) Attacchi via mare
+                print('\n\nCOMBACT BY SEA!!')
+                
+                for ground_area in self.ground_areas:
+                    ground_area.already_attacked_by_sea = False
 
+                attacks = self.get_attackable_ground_areas_by_sea(player)
+                attacks.sort(key=lambda x: x["prob_win"], reverse=True)
 
-            # 6) Attacchi terrestri
-            print('\n\nGROUND COMBACT!!')
-            
-            attacks = []
-            attacks = self.get_attackable_ground_areas(player)
-            # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
-
-            while 0 < len(attacks):
-                attack = attacks[0]
-                attacker_armies = attack["attacker"].armies - 1                
-                print('Battle: {} (player {}) with {} VS {} (player {}) with {}'.format(
-                        attack["attacker"].name, player.unique_id, attacker_armies,
-                        attack["defender"].name, attack["defender"].owner.unique_id, attack["defender"].armies
-                ))
-                conquered, min_moveable_armies = player.combact(
+                while 0 < len(attacks):
+                    attack = attacks[0]
+                    # if not attack['defender'].already_attacked_by_sea:
+                    attack['defender'].already_attacked_by_sea = True
+                    attacker_armies = attack["attacker"].armies - attack["armies_to_leave"]            
+                    print('Battle: {} (player {}) with {} VS {} (player {}) with {}'.format(
+                            attack["attacker"].name, player.unique_id, attacker_armies,
+                            attack["defender"].name, attack["defender"].owner.unique_id, attack["defender"].armies
+                    ))
+                    conquered, min_moveable_armies = player.combact_by_sea(
                                                         attack["attacker"], 
                                                         attack["defender"], 
-                                                        attacker_armies, 
-                                                        strategies.probs_win[player.strategy],
-                                                        self.atta_wins_combact
-                                                 )
-                if conquered:
-                    # Move armies from attacker area to conquered
-                    max_moveable_armies = attack["attacker"].armies - 1
-                    nomads = SPQRisiko.get_movable_armies_by_strategy(player.strategy, min_moveable_armies, max_moveable_armies)
-                    attack["attacker"].armies -= nomads
-                    attack["defender"].armies = nomads
-                    can_draw = True
-                    self.log("{} conquered {} from {} and it moves {} armies there out of {}".format(
-                        player.color, attack["defender"].name, attack["attacker"].name, nomads, max_moveable_armies))
-                # Re-sort newly attackable areas with newer probabilities
+                                                        attacker_armies
+                                                    )
+                    if conquered:
+                        # Move armies from attacker area to conquered
+                        max_moveable_armies = attack["attacker"].armies - attack["armies_to_leave"]
+                        nomads = SPQRisiko.get_movable_armies_by_strategy(player.strategy, min_moveable_armies, max_moveable_armies)
+                        attack["attacker"].armies -= nomads
+                        attack["defender"].armies = nomads
+                        can_draw = True
+                    # Remove from possible attacks all of those containing as defender the conquered territory
+                    # and update the probability
+                    attacks = self.update_attacks_by_sea(player, attacks)
+
+
+                # 6) Attacchi terrestri
+                print('\n\nGROUND COMBACT!!')
+                
+                attacks = []
                 attacks = self.get_attackable_ground_areas(player)
                 # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
-            
-            # Controllo se qualche giocatore è stato eliminato
-            for adv in self.players:
-                if adv.unique_id != player.unique_id:
-                    territories = self.get_territories_by_player(adv)
-                    if territories == []:
-                        self.log("{} has been eliminated by {}".format(adv.color, player.color))
-                        player.cards.append(adv.cards)
-                        for sea_area in self.get_territories_by_player(adv, ground_type="sea"):
-                            sea_area.trireme = 0
 
-            # 7) Spostamento strategico di fine turno
-            player.move_armies_by_goal(self)
+                while 0 < len(attacks):
+                    attack = attacks[0]
+                    attacker_armies = attack["attacker"].armies - 1                
+                    print('Battle: {} (player {}) with {} VS {} (player {}) with {}'.format(
+                            attack["attacker"].name, player.unique_id, attacker_armies,
+                            attack["defender"].name, attack["defender"].owner.unique_id, attack["defender"].armies
+                    ))
+                    conquered, min_moveable_armies = player.combact(
+                                                            attack["attacker"], 
+                                                            attack["defender"], 
+                                                            attacker_armies, 
+                                                            strategies.probs_win[player.strategy],
+                                                            self.atta_wins_combact
+                                                    )
+                    if conquered:
+                        # Move armies from attacker area to conquered
+                        max_moveable_armies = attack["attacker"].armies - 1
+                        nomads = SPQRisiko.get_movable_armies_by_strategy(player.strategy, min_moveable_armies, max_moveable_armies)
+                        attack["attacker"].armies -= nomads
+                        attack["defender"].armies = nomads
+                        can_draw = True
+                        self.log("{} conquered {} from {} and it moves {} armies there out of {}".format(
+                            player.color, attack["defender"].name, attack["attacker"].name, nomads, max_moveable_armies))
+                    # Re-sort newly attackable areas with newer probabilities
+                    attacks = self.get_attackable_ground_areas(player)
+                    # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
+                
+                # Controllo se qualche giocatore è stato eliminato
+                for adv in self.players:
+                    if adv.unique_id != player.unique_id:
+                        territories = self.get_territories_by_player(adv)
+                        if territories == []:
+                            self.log("{} has been eliminated by {}".format(adv.color, player.color))
+                            player.cards.append(adv.cards)
+                            adv.cards = []
+                            adv.eliminated = True
+                            for sea_area in self.get_territories_by_player(adv, ground_type="sea"):
+                                sea_area.trireme[adv.unique_id] = 0
 
-            # 8) Presa della carta
-            # Il giocatore può dimenticarsi di pescare la carta ahah sarebbe bello fare i giocatori smemorati
-            if can_draw and random.random() <= 1:
-                card = self.draw_a_card()
-                if card:
-                    player.cards.append(card)
-            else: 
-                print('Fuck it: I forgot to draw the card!')
-            can_draw = False
+                # 7) Spostamento strategico di fine turno
+                player.move_armies_by_goal(self)
+
+                # 8) Presa della carta
+                # Il giocatore può dimenticarsi di pescare la carta ahah sarebbe bello fare i giocatori smemorati
+                if can_draw and random.random() <= 1:
+                    card = self.draw_a_card()
+                    if card:
+                        player.cards.append(card)
+                else: 
+                    print('Fuck it: I forgot to draw the card!')
+                can_draw = False
 
         self.schedule.step()
         self.datacollector.collect(self)

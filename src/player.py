@@ -15,6 +15,7 @@ class Player(Agent):
 
         # computer: boolean, human or artificial player
         # artificial players are passive-only
+        self.eliminated = False
         self.computer = computer
         self.victory_points = 0
         self.color = constants.COLORS[unique_id %
