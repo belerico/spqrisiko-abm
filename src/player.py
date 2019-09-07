@@ -336,6 +336,8 @@ class Player(Agent):
                         else:
                             # Find nearest territory to that power place and reinforce it
                             nearest = model.find_nearest(pp, self)
+                            if nearest is not None:
+                                nearest.armies += armies
                 else:  # Put Power place by goal
                     if self.goal != "PP":
                         idx = model.random.randint(0, len(territories) - 1)
