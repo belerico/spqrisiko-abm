@@ -436,6 +436,9 @@ class Player(Agent):
 
                     print('Player ' + str(self.unique_id) + ' gets ' + str(armies) + ' armies')
                 else:  # Put Power place by goal
+                    # at max 12 power places
+                    if model.n_power_places() >= 12:
+                        return
                     if self.goal != "PP":
                         idx = model.random.randint(0, len(territories) - 1)
                         territories[idx].power_place = True
