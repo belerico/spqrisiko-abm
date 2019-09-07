@@ -386,6 +386,13 @@ class SPQRisiko(Model):
         elif ground_type == "sea":
             return [t for t in self.sea_areas if t.trireme[self.players.index(player)] > 0]
 
+    def n_power_places(self):
+        n = 0
+        for area in self.ground_areas:
+            if area.power_place:
+                n += 1
+        return n
+
     def update_atta_wins_combact_matrix(self, attacker_armies, defender_armies, mat_type='combact'):
         if mat_type == 'combact':
             if attacker_armies > self.atta_wins_combact.shape[0] and defender_armies > self.atta_wins_combact.shape[1]:
