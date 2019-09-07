@@ -513,7 +513,7 @@ class SPQRisiko(Model):
             
             attacks = []
             attacks = self.get_attackable_ground_areas(player)
-            attacks.sort(key=lambda x: x["prob_win"], reverse=True)
+            # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
 
             while 0 < len(attacks):
                 attack = attacks[0]
@@ -540,7 +540,7 @@ class SPQRisiko(Model):
                         player.color, attack["defender"].name, attack["attacker"].name, nomads, max_moveable_armies))
                 # Re-sort newly attackable areas with newer probabilities
                 attacks = self.get_attackable_ground_areas(player)
-                attacks.sort(key=lambda x: x["prob_win"], reverse=True)
+                # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
 
             # 7) Spostamento strategico di fine turno
             # Move armies from non-attackable ground area (if one) to another one
@@ -636,8 +636,11 @@ class SPQRisiko(Model):
         ground_area_neighbors = self.grid.get_neighbors(ground_area.unique_id)
         for ground_area_neighbor in ground_area_neighbors:
             ground_area_neighbor = self.grid.get_cell_list_contents([ground_area_neighbor])[0]
-            if isinstance(ground_area_neighbor, GroundArea) and ground_area_neighbor.owner.unique_id != ground_area.owner.unique_id:
+            if  isinstance(ground_area_neighbor, GroundArea) and \
+                ground_area_neighbor.owner.unique_id != ground_area.owner.unique_id:
+                
                 return 2
+        
         return 1
     
     def get_attackable_ground_areas_from(self, ground_area):
@@ -666,6 +669,10 @@ class SPQRisiko(Model):
             if attackables != []:
                 for attackable in attackables:
                     attacks.append(attackable)
+        if player.goal == "PP":
+            attacks.sort(key=lambda x: (x['defender'].power_place, x['prob_win']), reverse=True)
+        else: 
+            attacks.sort(key=lambda x: x['prob_win'], reverse=True)
         return attacks
 
     # Get non attackable areas wiht at least 2 armies and with an ally neighbor
