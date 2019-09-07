@@ -695,7 +695,7 @@ class SPQRisiko(Model):
         strongest = None
         for neighbor in self.grid.get_neighbors(area.unique_id):
             neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-            if not strongest or strongest.armies < neighbor.armies:
+            if isinstance(neighbor, GroundArea) and (not strongest or strongest.armies < neighbor.armies):
                 strongest = neighbor
         return strongest
 
