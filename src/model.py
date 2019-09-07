@@ -545,7 +545,14 @@ class SPQRisiko(Model):
                 # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
             
             # Controllo se qualche giocatore è stato eliminato
-
+            for adv in self.players:
+                if adv.unique_id != player.unique_id:
+                    territories = self.get_territories_by_player(adv)
+                    if territories == []:
+                        self.log("{} has been eliminated by {}".format(adv.color, player.color))
+                        player.cards.append(adv.cards)
+                        for sea_area in self.get_territories_by_player(adv, ground_type="sea"):
+                            sea_area.trireme = 0
 
             # 7) Spostamento strategico di fine turno
             player.move_armies_by_goal(self)
