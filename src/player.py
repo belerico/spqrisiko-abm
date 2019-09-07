@@ -272,14 +272,15 @@ class Player(Agent):
     def move_armies_by_goal(self, model):
         if self.goal == "PP":  # Reinforce power place territory by moving armies to it
             pp = model.get_weakest_power_place(self)
-            if pp and not model.is_not_attackable(pp, self):
+            if pp and not model.is_not_attackable(pp):
                 # Find neighbor who can reinforce it
                 neighbor = model.get_strongest_ally_neighbor(pp)
                 if neighbor:
-                    armies_to_move = round((neighbor.armies - 1) * strategies["PP"]["armies_on_weakest_power_place"])
-                    neighbor.armies -= armies_to_move
-                    pp.armies += armies_to_move
-                    model.log("{} moved {} armies from {} to {}".format(self.color, armies_to_move, neighbor.name, pp.name))
+                    if neighbor.armies > 1:
+                        armies_to_move = round(min((neighbor.armies - 1) * strategies["PP"]["armies_on_weakest_power_place"], 1))
+                        neighbor.armies -= armies_to_move
+                        pp.armies += armies_to_move
+                        model.log("{} moved {} armies from {} to {}".format(self.color, armies_to_move, neighbor.name, pp.name))
 
         elif self.goal == "LA":
             # Move armies from non-attackable ground area (if one) to another one
@@ -291,7 +292,7 @@ class Player(Agent):
                 while not moved and i < len(non_attackables):
                     non_attackable = non_attackables[i]
                     # Based on strategy move armies to neighbor to get higher units
-                    moved = model.move_armies_strategy_based(self, non_attackable)
+                    moved = self.move_armies_strategy_based(model, non_attackable)
                     i += 1
 
         else:  # self.goal == "BE"
@@ -303,7 +304,7 @@ class Player(Agent):
                 while not moved and i < len(non_attackables):
                     non_attackable = non_attackables[i]
                     # Based on strategy move armies to neighbor to get higher units
-                    moved = model.move_armies_strategy_based(self, non_attackable)
+                    moved = self.move_armies_strategy_based(model, non_attackable)
                     i += 1
 
     # Move armies from non attackable area to attackable neighbor based on armies:
@@ -388,7 +389,9 @@ class Player(Agent):
                                 if self.strategy == "Neutral":
                                     add = round(armies / 2)
                                     armies -= add
-                                lowest_territory.armies += add
+                                    lowest_territory.armies += add
+                                else:
+                                    lowest_territory.armies += armies
                         if self.strategy == "Aggressive" or self.strategy == "Neutral":  # Reinforce strongest territory
                             strongest = None
                             strong = 0
@@ -413,7 +416,7 @@ class Player(Agent):
                         for ground_area in max_empire:
                             for neighbor in model.grid.get_neighbors(ground_area.unique_id):
                                 neighbor = model.grid.get_cell_list_contents([neighbor])[0]
-                                if neighbor.owner.unique_id != self.unique_id:
+                                if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id != self.unique_id:
                                     border.append(neighbor)
                                     break
                         if border != []:

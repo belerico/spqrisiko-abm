@@ -543,7 +543,7 @@ class SPQRisiko(Model):
                 attacks.sort(key=lambda x: x["prob_win"], reverse=True)
 
             # 7) Spostamento strategico di fine turno
-            player.move_armies_strategy_based(self)
+            player.move_armies_by_goal(self)
 
             # 8) Presa della carta
             # Il giocatore può dimenticarsi di pescare la carta ahah sarebbe bello fare i giocatori smemorati
@@ -677,10 +677,10 @@ class SPQRisiko(Model):
 
         return non_attackables
 
-    def is_not_attackable(self, area, player):
+    def is_not_attackable(self, area):
         for neighbor in self.grid.get_neighbors(area.unique_id):
             neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-            if neighbor.owner.unique_id != player.unique_id:
+            if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id != area.owner.unique_id:
                 return False
         return True
 
