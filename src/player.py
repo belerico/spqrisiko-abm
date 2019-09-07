@@ -277,7 +277,7 @@ class Player(Agent):
                 neighbor = model.get_strongest_ally_neighbor(pp)
                 if neighbor:
                     if neighbor.armies > 1:
-                        armies_to_move = round(min((neighbor.armies - 1) * strategies["PP"]["armies_on_weakest_power_place"], 1))
+                        armies_to_move = round(max((neighbor.armies - 1) * strategies["PP"]["armies_on_weakest_power_place"], 1))
                         neighbor.armies -= armies_to_move
                         pp.armies += armies_to_move
                         model.log("{} moved {} armies from {} to {}".format(self.color, armies_to_move, neighbor.name, pp.name))
@@ -363,7 +363,7 @@ class Player(Agent):
                         # Reinforce (if existing) the weakest power place territory
                         pp = model.get_weakest_power_place(self)
                         if pp:
-                            pp_armies = round(min(strategies["PP"]["armies_on_weakest_power_place"] * armies, 1))
+                            pp_armies = round(max(strategies["PP"]["armies_on_weakest_power_place"] * armies, 1))
                             armies -= pp_armies
                             pp.armies += pp_armies
                         # Reinforce territory near adversary power_place
