@@ -304,6 +304,8 @@ class SPQRisiko(Model):
 
         while len(visited) > 0:
             t = visited.pop(0)
+            if distances[t.unique_id] > 4:
+                break
             for neighbor in self.grid.get_neighbors(t.unique_id):
                 neighbor = self.grid.get_cell_list_contents([neighbor])[0]
                 if neighbor.found == 0:
