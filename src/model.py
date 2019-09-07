@@ -543,22 +543,11 @@ class SPQRisiko(Model):
                 # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
 
             # 7) Spostamento strategico di fine turno
-            # Move armies from non-attackable ground area (if one) to another one
-            # Get the first non-attackable ground area with > 1 armies
-            non_attackables = self.non_attackable_areas(player)
-            if len(non_attackables) > 0:
-                i = 0
-                moved = False
-                while not moved and i < len(non_attackables):
-                    non_attackable = non_attackables[i]
-                    # Based on strategy move armies to neighbor to get higher units
-                    moved = player.move_armies_strategy_based(self, non_attackable)
-                    i += 1
-
+            player.move_armies_by_goal(self)
 
             # 8) Presa della carta
             # Il giocatore può dimenticarsi di pescare la carta ahah sarebbe bello fare i giocatori smemorati
-            if can_draw and random.random() <= .75:
+            if can_draw and random.random() <= 1:
                 card = self.draw_a_card()
                 if card:
                     player.cards.append(card)
@@ -676,9 +665,11 @@ class SPQRisiko(Model):
         return attacks
 
     # Get non attackable areas wiht at least 2 armies and with an ally neighbor
-    def non_attackable_areas(self, player):
+    def non_attackable_areas(self, player, territories=None):
         non_attackables = []
-        for ground_area in self.get_territories_by_player(player):
+        if not territories:
+            territories = self.get_territories_by_player(player)
+        for ground_area in territories:
             if ground_area.armies > 1:
                 attackable, has_ally_neighbor = False, False
                 for neighbor in self.grid.get_neighbors(ground_area.unique_id):
@@ -693,13 +684,20 @@ class SPQRisiko(Model):
 
         return non_attackables
 
-    def is_not_attackable(self, area, player):
+    def is_not_attackable(self, area):
         for neighbor in self.grid.get_neighbors(area.unique_id):
             neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-            if neighbor.owner.unique_id != player.unique_id:
+            if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id != area.owner.unique_id:
                 return False
-
         return True
+
+    def get_strongest_ally_neighbor(self, area):
+        strongest = None
+        for neighbor in self.grid.get_neighbors(area.unique_id):
+            neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+            if not strongest or strongest.armies < neighbor.armies:
+                strongest = neighbor
+        return strongest
 
     def is_neighbor_of(self, area1, area2):
         for neighbor in self.grid.get_neighbors(area1.unique_id):
