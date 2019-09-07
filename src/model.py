@@ -24,7 +24,7 @@ from mesa.space import NetworkGrid
 class SPQRisiko(Model):
     """A SPQRisiko model with some number of players"""
 
-    def __init__(self, n_players, points_limit, strategy):
+    def __init__(self, n_players, points_limit, strategy, goal):
         super().__init__()
         self.players_goals = ["BE", "LA", "PP"]  # Definition of acronyms on `strategies.py`
         self.current_turn = 0
@@ -35,9 +35,16 @@ class SPQRisiko(Model):
         self.n_players = n_players if n_players <= constants.MAX_PLAYERS else constants.MAX_PLAYERS
         # How many computer players will be
         self.n_computers = constants.MAX_PLAYERS - n_players
-        # Creation of player and computer agents
+        # Creation of player, goals and computer agents
+        goals = []
+        if goal == "Random":
+            for player in range(n_players):
+                goals.append(self.random.choice(self.players_goals))
+        else:
+            goals = [goal for i in range(self.n_players)]
+
         self.players = [Player(i, computer=False, strategy=self.get_strategy_setup(strategy),
-                               goal=self.random.choice(self.players_goals), model=self)
+                               goal=goals[i], model=self)
                         for i in range(self.n_players)]
         for player in self.players:
             self.log("{} follows {} goal with a {} strategy".format(player.color, player.goal, player.strategy))
@@ -243,43 +250,6 @@ class SPQRisiko(Model):
                 sum += self.reinforces_by_goal[self.get_tris_name(tris)][goal]
             self.reinforces_by_goal["average"][goal] = float(sum) / count
 
-    """ def get_best_tris(self, cards, player):
-        if len(cards) < 3:
-            return None
-        best_tris = None
-        # Get all possible reinforces combination from tris from cards
-        all_tris = [list(t) for t in itertools.combinations(cards, 3)]
-        all_reinforces = [SPQRisiko.reinforces_from_tris(tris) for tris in all_tris]
-
-        # Remove None from list
-        real_tris = [all_tris[i] for i in range(len(all_reinforces)) if all_reinforces[i]]
-        all_reinforces = [i for i in all_reinforces if i]
-        if len(all_reinforces) == 0:
-            return None
-
-        named_tris = []
-        for tris in real_tris:
-            named_tris.append(get_tris_name(tris))
-        highest_score = 0
-        i = -1
-        for i, name in enumerate(named_tris):
-            score = self.reinforces_by_goal[name][player.goal]
-            if highest_score < score:
-                index = i
-                highest_score = score
-
-        best_tris = real_tris[i]
-        # Play tris if it is a convenient tris (it is in the first half of tris ordered by score)
-        return best_tris if self.tris_by_goal[player.goal].index(get_tris_name(tris)) <= len(self.tris_by_goal[player.goal]) / 2 else None """
-
-    """ def play_tris(self, tris, player):
-        reinforces = self.reinforces_from_tris(tris)
-        # remove cards from player and put in trash deck
-        for card in tris:
-            card = player.cards.pop([i for i, n in enumerate(player.cards) if n["type"] == card["type"]][0])
-            self.trashed_cards.append(card)
-        return reinforces """
-
     def count_players_sea_areas(self):
         sea_areas = [0] * self.n_players
 
@@ -389,67 +359,6 @@ class SPQRisiko(Model):
 
         won = True if max_points > self.points_limit else False
         return max_player, won
-
-    """ def put_reinforces(self, player, armies, reinforce_type="legionaries"):
-        if isinstance(armies, dict):
-            for key, value in armies.items():
-                self.put_reinforces(player, value, key)
-        # TODO: put by goals
-        elif reinforce_type == "triremes":
-            territories = self.get_territories_by_player(player, "sea")
-            if len(territories) > 0:
-                if player.goal != "LA":
-                    random_territory = self.random.randint(0, len(territories) - 1)
-                    territories[random_territory].trireme[self.players.index(player)] += armies
-                else:  # Put reinforces on sea area with the lowest number of armies
-                    lowest_territory = None
-                    low = 0
-                    for sea in territories:
-                        if not lowest_territory or low > sea.trireme[self.players.index(player)]:
-                            low = sea.trireme[self.players.index(player)]
-                            lowest_territory = sea
-                    if lowest_territory:
-                        lowest_territory.trireme[self.players.index(player)] += armies
-                print('Player ' + str(player.unique_id) + ' gets ' + str(armies) + ' triremes')
-        else:
-            territories = self.get_territories_by_player(player, "ground")
-            if len(territories) > 0:
-                if reinforce_type == "legionaries":
-                    # Play legionaries by strategy
-                    if player.goal == "PP":
-                        # Reinforce (if existing) the weakest power place territory
-                        pp = self.get_weakest_power_place(player)
-                        if pp:
-                            pp_armies = round(min(strategies["PP"]["armies_on_weakest_power_place"] * armies, 1))
-                            armies -= pp_armies
-                            pp.armies += pp_armies
-                        # Reinforce territory near adversary power_place
-                        pp = self.get_weakest_adversary_power_place(player)
-                        if not pp:
-                            idx = self.random.randint(0, len(territories) - 1)
-                            territories[idx].armies += armies
-                        else:
-                            # Find nearest territory to that power place and reinforce it
-                            nearest = self.find_nearest(pp, player)
-                else:  # Put Power place by goal
-                    if player.goal != "PP":
-                        idx = self.random.randint(0, len(territories) - 1)
-                        territories[idx].power_place = True
-                    else:
-                        non_attackables = self.non_attackable_areas(player)
-                        if len(non_attackables) > 0:
-                            idx = 0  # Put power place in the first non attackable ground area
-                            non_attackables[idx].power_place = True
-                        else:
-                            highest_armies_territory = None
-                            high = 0
-                            for terr in territories:
-                                if terr.armies > high or (highest_armies_territory and highest_armies_territory.power_place == False):
-                                    high = terr.armies
-                                    highest_armies_territory = terr
-                            if highest_armies_territory:
-                                highest_armies_territory.power_place = True
-                    print('Player ' + str(player.unique_id) + ' gets a power place') """
 
     def get_territories_by_player(self, player: Player, ground_type="ground"):
         if ground_type == "ground":
@@ -774,32 +683,6 @@ class SPQRisiko(Model):
                 return True
 
         return False
-
-    """ # Move armies from non attackable area to attackable neighbor based on armies:
-    # "Aggressive" -> higher # of armies
-    # "Passive" -> lower # of armies
-    # "Neutral" -> random
-    def move_armies_strategy_based(self, player, area_from):
-        attackable_neighbors = []
-        for neighbor in self.grid.get_neighbors(area_from.unique_id):
-            neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-            if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id != area_from.owner.unique_id:
-                if not self.is_not_attackable(neighbor, player):
-                    attackable_neighbors.append(neighbor)
-        if len(attackable_neighbors) == 0:
-            return False
-
-        attackable_neighbors.sort(key=lambda x: x.armies, reverse=True)
-        if player.strategy == "Aggressive":
-            area_to = attackable_neighbors[0]
-        elif player.strategy == "Neutral":
-            area_to = random.choice(attackable_neighbors)
-        else:
-            area_to = attackable_neighbors[-1]
-
-        area_to.armies += area_from.armies - 1
-        area_from.armies = 1
-        return True """
 
     def log(self, log):
         self.journal.append("Turn {}: ".format(self.current_turn) + log)
