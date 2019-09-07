@@ -331,8 +331,10 @@ class SPQRisiko(Model):
                 __dfs_visit__(territory, ground_areas, cc_num)
                 cc_num += 1
         
-        largest_cc = list(collections.Counter([t for t in ground_areas if t != -1]).most_common())[0][0]
-        return [self.ground_areas[idx] for idx, cc in enumerate(ground_areas) if cc == largest_cc]
+        stats = list(collections.Counter([t for t in ground_areas if t != -1]).most_common())
+        if stats != []:
+            return [self.ground_areas[idx] for idx, cc in enumerate(ground_areas) if cc == stats[0][0]]
+        return stats
 
     def maximum_empires(self):
         # It's a DFS visit in which we account for
@@ -541,6 +543,9 @@ class SPQRisiko(Model):
                 # Re-sort newly attackable areas with newer probabilities
                 attacks = self.get_attackable_ground_areas(player)
                 # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
+            
+            # Controllo se qualche giocatore è stato eliminato
+
 
             # 7) Spostamento strategico di fine turno
             player.move_armies_by_goal(self)
