@@ -118,7 +118,7 @@ class SPQRisiko(Model):
 
         self.ground_areas.sort(key=lambda x: x.unique_id)
         self.sea_areas.sort(key=lambda x: x.unique_id)
-        
+
         self.running = True
         self.datacollector.collect(self)
 
@@ -302,14 +302,51 @@ class SPQRisiko(Model):
                     neighbor.found = 1
                     distances[neighbor.unique_id] = distances[t.unique_id] + 1
                     visited.append(neighbor)
-                    if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id == player.unique_id:
+                    if neighbor.type == "ground" and neighbor.owner.unique_id == player.unique_id:
                         return neighbor
 
         return None
 
+    def get_largest_empire(self, player):
+        # It's another DFS visit in which we account for the membership of a node to a connected component
+        def __dfs_visit__(territory, ground_areas, cc_num):
+                territory.found = 1
+                ground_areas[territory.unique_id] = cc_num
+                for neighbor in self.grid.get_neighbors(territory.unique_id):
+                    neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+                    if  neighbor.type == "ground" and \
+                        neighbor.found == 0 and \
+                        neighbor.owner.unique_id == player.unique_id:
+                        
+                        __dfs_visit__(neighbor, ground_areas, cc_num)
+
+        cc_num = 0
+        ground_areas = [-1] * 45
+
+        for territory in self.ground_areas:
+            territory.found = 0
+
+        for territory in self.ground_areas:
+            if territory.type == "ground" and territory.found == 0 and territory.owner.unique_id == player.unique_id:
+                __dfs_visit__(territory, ground_areas, cc_num)
+                cc_num += 1
+        
+        largest_cc = list(collections.Counter([t for t in ground_areas if t != -1]).most_common())[0][0]
+        return [self.ground_areas[idx] for idx, cc in enumerate(ground_areas) if cc == largest_cc]
+
     def maximum_empires(self):
         # It's a DFS visit in which we account for
         # the length of every connected components
+        def __dfs_visit__(territory, d):
+            territory.found = 1
+            for neighbor in self.grid.get_neighbors(territory.unique_id):
+                neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+                if  neighbor.type == "ground" and \
+                    neighbor.found == 0 and \
+                    neighbor.owner.unique_id == territory.owner.unique_id:
+                    
+                    d = __dfs_visit__(neighbor, d)
+            return d + 1
         
         cc_lengths = [0] * self.n_players
 
@@ -318,22 +355,11 @@ class SPQRisiko(Model):
 
         for territory in self.ground_areas:
             if not territory.owner.computer and territory.found == 0:
-                distance = self.__dfs_visit__(territory, 0)
+                distance = __dfs_visit__(territory, 0)
                 if distance > cc_lengths[territory.owner.unique_id]:
                     cc_lengths[territory.owner.unique_id] = distance
         
         return cc_lengths
-
-    def __dfs_visit__(self, territory, d):
-        territory.found = 1
-        for neighbor in self.grid.get_neighbors(territory.unique_id):
-            neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-            if  isinstance(neighbor, GroundArea) and \
-                neighbor.found == 0 and \
-                neighbor.owner.unique_id == territory.owner.unique_id:
-                
-                d = self.__dfs_visit__(neighbor, d)
-        return d + 1
 
     # Controlla se `player` ha vinto oppure se c'è un vincitore tra tutti
     def winner(self, player=None):
@@ -619,7 +645,7 @@ class SPQRisiko(Model):
         if ground_area.armies > 1:
             for neighbor in self.grid.get_neighbors(ground_area.unique_id):
                 neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-                if isinstance(neighbor, GroundArea) and \
+                if neighbor.type == "ground" and \
                     neighbor.owner.unique_id != ground_area.owner.unique_id and \
                     ground_area.armies - 1 >= min(3, neighbor.armies):
                     
@@ -650,7 +676,7 @@ class SPQRisiko(Model):
                 attackable, has_ally_neighbor = False, False
                 for neighbor in self.grid.get_neighbors(ground_area.unique_id):
                     neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-                    if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id != player.unique_id:
+                    if neighbor.type == "ground" and neighbor.owner.unique_id != player.unique_id:
                         attackable = True
                         break
                     has_ally_neighbor = True

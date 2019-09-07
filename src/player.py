@@ -360,6 +360,37 @@ class Player(Agent):
                                     strongest = ground
                             if strongest:
                                 strongest.armies += armies
+                    elif self.goal == "BE":
+                        """
+                        If the player goal is to gain victory points based on having the biggest empire, then:
+                        - if the strategy is Aggressive, then it'll be reinforced the territory on the border with the largest 
+                          number of armies
+                        - if the strategy is Passive, then it'll be reinforced the territory on the border with the lesser number
+                          of armies
+                        - if the strategy is Neutral, both will be reinforced
+                        """
+                        max_empire = model.get_largest_empire(self)
+                        border = []
+                        # Get all the territories on the border
+                        for ground_area in max_empire:
+                            for neighbor in model.grid.get_neighbors(ground_area.unique_id):
+                                neighbor = model.grid.get_cell_list_contents([neighbor])[0]
+                                if neighbor.owner.unique_id != self.unique_id:
+                                    border.append(neighbor)
+                                    break
+                        if border != []:
+                            border.sort(key=lambda x: x.armies, reverse=False)
+                            if self.strategy == "Aggressive":
+                                border[-1].armies += armies
+                            elif self.strategy == "Passive":
+                                border[0].armies += armies
+                            else:
+                                i = 0
+                                armies_per_territory = math.floor(armies / len(border))
+                                while armies > 0:
+                                    border[i % len(border)].armies += armies_per_territory
+                                    armies -= armies_per_territory
+                                    i += 1
 
                     print('Player ' + str(self.unique_id) + ' gets ' + str(armies) + ' armies')
                 else:  # Put Power place by goal
