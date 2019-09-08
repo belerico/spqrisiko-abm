@@ -21,6 +21,6 @@ strategies = {
 
     },
     "LA": {  # LA = Control Largest number of Areas
-        "tris": [2, 2, 1]
+        "tris": [2, 3, 1]
     }
 }

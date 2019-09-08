@@ -238,8 +238,8 @@ def get_probabilities_ground_combact(A: int, D: int):
 
 
 if __name__ == "__main__":
-    atta_wins_combact_by_sea = get_probabilities_combact_by_sea(100, 100)
-    atta_wins_combact = get_probabilities_ground_combact(100, 100)
+    atta_wins_combact_by_sea = get_probabilities_combact_by_sea(150, 150)
+    atta_wins_combact = get_probabilities_ground_combact(150, 150)
     if not os.path.exists('spqrisiko-abm/matrices'):
         os.makedirs('spqrisiko-abm/matrices')
     with open('spqrisiko-abm/matrices/atta_wins_combact_by_sea.pkl', 'wb') as f:
