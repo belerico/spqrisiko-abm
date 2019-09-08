@@ -46,8 +46,8 @@ class SPQRisiko(Model):
         # Creation of player, goals and computer agents
         goals = []
         if goal == "Random":
-            for player in range(n_players):
-                goals.append(self.random.choice(self.players_goals))
+            for i, player in enumerate(range(n_players)):
+                goals.append(self.players_goals[i % 3])
         else:
             goals = [goal for i in range(self.n_players)]
 
@@ -398,6 +398,7 @@ class SPQRisiko(Model):
         return n
 
     def update_atta_wins_combact_matrix(self, attacker_armies, defender_armies, mat_type='combact'):
+        print(attacker_armies, defender_armies, self.atta_wins_combact.shape, self.atta_wins_combact_by_sea.shape)
         if mat_type == 'combact':
             if attacker_armies > self.atta_wins_combact.shape[0] and defender_armies > self.atta_wins_combact.shape[1]:
                 self.atta_wins_combact = get_probabilities_ground_combact(attacker_armies, defender_armies)
@@ -764,14 +765,14 @@ class SPQRisiko(Model):
 
 # parameter lists for each parameter to be tested in batch run
 # n_players, points_limit, strategy, goal
-br_params = {"n_players": [5],
+br_params = {"n_players": [3],
              "points_limit": [50],
-             "strategy": ["Neutral"],
-             "goal": ["BE"]}
+             "strategy": ["Passive"],
+             "goal": ["Random"]}
 
 br = BatchRunner(SPQRisiko,
                  br_params,
-                 iterations=5,
+                 iterations=100,
                  max_steps=1000,
                  model_reporters={"Data Collector": lambda m: m.datacollector})
 

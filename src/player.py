@@ -440,10 +440,13 @@ class Player(Agent):
                             else:
                                 i = 0
                                 armies_per_territory = math.ceil(armies / len(border))
-                                while armies > 0:
+                                while armies - armies_per_territory >= 0:
                                     border[i % len(border)].armies += armies_per_territory
                                     armies -= armies_per_territory
                                     i += 1
+                                if armies > 0:
+                                    border[i % len(border)].armies += armies
+                                    armies -= armies 
 
                     print('Player ' + str(self.unique_id) + ' gets ' + str(armies) + ' armies')
                 else:  # Put Power place by goal
