@@ -398,7 +398,7 @@ class SPQRisiko(Model):
         if ground_type == "ground":
             return [t for t in self.ground_areas if t.owner.unique_id == player.unique_id]
         elif ground_type == "sea":
-            return [t for t in self.sea_areas if t.trireme[self.players.index(player)] > 0]
+            return [t for t in self.sea_areas if t.trireme[self.players.index(player)] > 0 or max(t.trireme) == 0]
 
     def n_power_places(self):
         n = 0
