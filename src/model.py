@@ -1,6 +1,7 @@
 import os
 import math
 import json
+import pandas
 import pickle
 import networkx as nx
 import random
@@ -17,9 +18,16 @@ from functools import cmp_to_key
 
 from mesa import Agent, Model
 from mesa.time import RandomActivation
+from mesa.batchrunner import BatchRunner
 from mesa.datacollection import DataCollector
 from mesa.space import NetworkGrid
 
+def get_winner(model):
+    winner, points = model.winner()
+    return winner
+
+def get_winner_turn(model):
+    return model.current_turn
 
 class SPQRisiko(Model):
     """A SPQRisiko model with some number of players"""
@@ -60,13 +68,9 @@ class SPQRisiko(Model):
         self.G, self.territories_dict = self.create_graph_map()
         self.grid = NetworkGrid(self.G)
         self.datacollector = DataCollector(model_reporters={
-                                              "Armies": SPQRisiko.get_n_armies_by_player,
-                                              "Cards": lambda m: len(m.deck),
-                                              "Trash": lambda m: len(m.trashed_cards)
-                                            },
-                                           agent_reporters={
-                                               "PlayerCards": lambda p: len(p.cards)
-                                           })
+                                              "Winner": get_winner,
+                                              "Turn": get_winner_turn
+                                            })
         # Schedule
         self.schedule = RandomActivation(self)
         # Subgraphs
@@ -125,7 +129,7 @@ class SPQRisiko(Model):
         self.sea_areas.sort(key=lambda x: x.unique_id)
 
         self.running = True
-        self.datacollector.collect(self)
+        # self.datacollector.collect(self)
 
     def get_strategy_setup(self, strategy):
         strats = ["Aggressive", "Passive", "Neutral"]
@@ -337,7 +341,7 @@ class SPQRisiko(Model):
                 cc_num += 1
         
         stats = list(collections.Counter([t for t in ground_areas if t != -1]).most_common())
-        if len(stats) != 0:
+        if stats != []:
             return [self.ground_areas[idx] for idx, cc in enumerate(ground_areas) if cc == stats[0][0]]
         return stats
 
@@ -375,9 +379,9 @@ class SPQRisiko(Model):
                 return True
             return False
 
+        max_points = -1
+        max_player = None
         for p in self.players:
-            max_points = -1
-            max_player = None
             if p.victory_points > max_points:
                 max_points = p.victory_points
                 max_player = p
@@ -430,6 +434,10 @@ class SPQRisiko(Model):
                 # 1.1) Controllo vittoria
                 if self.winner(player):
                     self.running = False
+                    print(player)
+                    print(get_winner(self))
+                    print(get_winner_turn(self))
+                    self.datacollector.collect(self)
                     self.log("{} has won!".format(player.color))
                     return True
 
@@ -576,9 +584,7 @@ class SPQRisiko(Model):
                     card = self.draw_a_card()
                     if card:
                         player.cards.append(card)
-
         self.schedule.step()
-        self.datacollector.collect(self)
         return False
 
     def update_attacks_by_sea(self, player, future_attacks):
@@ -760,3 +766,26 @@ class SPQRisiko(Model):
             for player in self.players:
                 sum_a += sum([t.armies for t in self.get_territories_by_player(player)])
             return sum_a / len(self.players)
+
+# parameter lists for each parameter to be tested in batch run
+# n_players, points_limit, strategy, goal
+br_params = {"n_players": [5],
+             "points_limit": [50],
+             "strategy": ["Neutral"],
+             "goal": ["BE"]}
+
+br = BatchRunner(SPQRisiko,
+                 br_params,
+                 iterations=5,
+                 max_steps=1000,
+                 model_reporters={"Data Collector": lambda m: m.datacollector})
+
+if __name__ == '__main__':
+    br.run_all()
+    br_df = br.get_model_vars_dataframe()
+    br_step_data = pandas.DataFrame()
+    for i in range(len(br_df["Data Collector"])):
+        if isinstance(br_df["Data Collector"][i], DataCollector):
+            i_run_data = br_df["Data Collector"][i].get_model_vars_dataframe()
+            br_step_data = br_step_data.append(i_run_data, ignore_index=True)
+    br_step_data.to_csv("BankReservesModel_Step_Data.csv")

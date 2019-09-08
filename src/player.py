@@ -25,6 +25,12 @@ class Player(Agent):
         self.strategy = strategy
         super().__init__(unique_id,  model)
 
+    def __str__(self):
+        return self.color
+
+    def __repr__(self):
+        return self.__str__()
+
     def get_aggressivity(self):
         return probs_win[self.strategy]
 
@@ -423,7 +429,7 @@ class Player(Agent):
                             for neighbor in model.grid.get_neighbors(ground_area.unique_id):
                                 neighbor = model.grid.get_cell_list_contents([neighbor])[0]
                                 if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id != self.unique_id:
-                                    border.append(neighbor)
+                                    border.append(ground_area)
                                     break
                         if border != []:
                             border.sort(key=lambda x: x.armies, reverse=False)
@@ -433,7 +439,7 @@ class Player(Agent):
                                 border[0].armies += armies
                             else:
                                 i = 0
-                                armies_per_territory = math.floor(armies / len(border))
+                                armies_per_territory = math.ceil(armies / len(border))
                                 while armies > 0:
                                     border[i % len(border)].armies += armies_per_territory
                                     armies -= armies_per_territory
@@ -444,21 +450,21 @@ class Player(Agent):
                     # at max 12 power places
                     if model.n_power_places() >= 12:
                         return
-                    if self.goal != "PP":
-                        idx = model.random.randint(0, len(territories) - 1)
-                        territories[idx].power_place = True
+                    # if self.goal != "PP":
+                    #     idx = model.random.randint(0, len(territories) - 1)
+                    #     territories[idx].power_place = True
+                    # else:
+                    non_attackables = model.non_attackable_areas(self)
+                    if len(non_attackables) > 0:
+                        idx = 0  # Put power place in the first non attackable ground area
+                        non_attackables[idx].power_place = True
                     else:
-                        non_attackables = model.non_attackable_areas(self)
-                        if len(non_attackables) > 0:
-                            idx = 0  # Put power place in the first non attackable ground area
-                            non_attackables[idx].power_place = True
-                        else:
-                            highest_armies_territory = None
-                            high = 0
-                            for terr in territories:
-                                if terr.armies > high or (highest_armies_territory and highest_armies_territory.power_place == False):
-                                    high = terr.armies
-                                    highest_armies_territory = terr
-                            if highest_armies_territory:
-                                highest_armies_territory.power_place = True
+                        highest_armies_territory = None
+                        high = 0
+                        for terr in territories:
+                            if terr.armies > high or (highest_armies_territory and highest_armies_territory.power_place == False):
+                                high = terr.armies
+                                highest_armies_territory = terr
+                        if highest_armies_territory:
+                            highest_armies_territory.power_place = True
                     print('Player ' + str(self.unique_id) + ' gets a power place')
