@@ -3,7 +3,7 @@ import random
 import operator
 import itertools
 
-from .strategies import strategies
+from .strategies import strategies, probs_win
 from . import constants
 from .markov import get_probabilities_ground_combact
 from .territory import GroundArea, SeaArea
@@ -26,12 +26,7 @@ class Player(Agent):
         super().__init__(unique_id,  model)
 
     def get_aggressivity(self):
-        if self.strategy == 'Aggressive':
-            return .6
-        elif self.strategy == 'Neutral':
-            return .7
-        else:
-            return .8
+        return probs_win[self.strategy]
 
     def update_victory_points(
             self, 

@@ -234,11 +234,11 @@ class SPQRisiko(Model):
 
         self.reinforces_by_goal["average"] = {}
         for goal, value in strategies.strategies.items():
-            sum, count = 0, 0
+            points, count = 0, 0
             for tris in real_tris:
                 count += 1
-                sum += self.reinforces_by_goal[self.get_tris_name(tris)][goal]
-            self.reinforces_by_goal["average"][goal] = float(sum) / count
+                points += self.reinforces_by_goal[self.get_tris_name(tris)][goal]
+            self.reinforces_by_goal["average"][goal] = float(points) / count
 
     def count_players_sea_areas(self):
         sea_areas = [0] * self.n_players
@@ -310,15 +310,15 @@ class SPQRisiko(Model):
     def get_largest_empire(self, player):
         # It's another DFS visit in which we account for the membership of a node to a connected component
         def __dfs_visit__(territory, ground_areas, cc_num):
-                territory.found = 1
-                ground_areas[territory.unique_id] = cc_num
-                for neighbor in self.grid.get_neighbors(territory.unique_id):
-                    neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-                    if  neighbor.type == "ground" and \
-                        neighbor.found == 0 and \
-                        neighbor.owner.unique_id == player.unique_id:
-                        
-                        __dfs_visit__(neighbor, ground_areas, cc_num)
+            territory.found = 1
+            ground_areas[territory.unique_id] = cc_num
+            for neighbor in self.grid.get_neighbors(territory.unique_id):
+                neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+                if neighbor.type == "ground" and \
+                   neighbor.found == 0 and \
+                   neighbor.owner.unique_id == player.unique_id:
+
+                    __dfs_visit__(neighbor, ground_areas, cc_num)
 
         cc_num = 0
         ground_areas = [-1] * 45
@@ -332,7 +332,7 @@ class SPQRisiko(Model):
                 cc_num += 1
         
         stats = list(collections.Counter([t for t in ground_areas if t != -1]).most_common())
-        if stats != []:
+        if len(stats) != 0:
             return [self.ground_areas[idx] for idx, cc in enumerate(ground_areas) if cc == stats[0][0]]
         return stats
 
@@ -343,9 +343,9 @@ class SPQRisiko(Model):
             territory.found = 1
             for neighbor in self.grid.get_neighbors(territory.unique_id):
                 neighbor = self.grid.get_cell_list_contents([neighbor])[0]
-                if  neighbor.type == "ground" and \
-                    neighbor.found == 0 and \
-                    neighbor.owner.unique_id == territory.owner.unique_id:
+                if neighbor.type == "ground" and \
+                   neighbor.found == 0 and \
+                   neighbor.owner.unique_id == territory.owner.unique_id:
                     
                     d = __dfs_visit__(neighbor, d)
             return d + 1
@@ -429,7 +429,7 @@ class SPQRisiko(Model):
                     return True
 
                 # 2) Fase dei rinforzi
-                print('\n\nREINFORCES')
+                print('\nREINFORCES')
                 player.update_ground_reinforces_power_places()
                 reinforces = Player.get_ground_reinforces(player_territories)
                 self.log("{} earns {} legionaries (he owns {} territories)".format(player.color, reinforces, territories[player.unique_id]))
@@ -450,7 +450,7 @@ class SPQRisiko(Model):
                 # player.naval_movement(sea_area_from, sea_area_to, n_trireme)
 
                 # 4) Combattimento navale
-                print('\n\nNAVAL COMBACT!!')
+                print('\nNAVAL COMBACT!!')
                 # Get all sea_areas that the current player can attack
                 attackable_sea_areas = []
                 for sea_area in self.get_territories_by_player(player, ground_type='sea'):
@@ -483,7 +483,7 @@ class SPQRisiko(Model):
                     )
 
                 # 5) Attacchi via mare
-                print('\n\nCOMBACT BY SEA!!')
+                print('\nCOMBACT BY SEA!!')
                 
                 for ground_area in self.ground_areas:
                     ground_area.already_attacked_by_sea = False
@@ -516,9 +516,8 @@ class SPQRisiko(Model):
                     # and update the probability
                     attacks = self.update_attacks_by_sea(player, attacks)
 
-
                 # 6) Attacchi terrestri
-                print('\n\nGROUND COMBACT!!')
+                print('\nGROUND COMBACT!!')
                 
                 attacks = []
                 attacks = self.get_attackable_ground_areas(player)
@@ -553,11 +552,11 @@ class SPQRisiko(Model):
                 
                 # Controllo se qualche giocatore è stato eliminato
                 for adv in self.players:
-                    if adv.unique_id != player.unique_id:
+                    if adv.unique_id != player.unique_id and not adv.eliminated:
                         territories = self.get_territories_by_player(adv)
-                        if territories == []:
+                        if len(territories) == 0:
                             self.log("{} has been eliminated by {}".format(adv.color, player.color))
-                            player.cards.append(adv.cards)
+                            player.cards.extend(adv.cards)
                             adv.cards = []
                             adv.eliminated = True
                             for sea_area in self.get_territories_by_player(adv, ground_type="sea"):
@@ -572,9 +571,6 @@ class SPQRisiko(Model):
                     card = self.draw_a_card()
                     if card:
                         player.cards.append(card)
-                else: 
-                    print('Fuck it: I forgot to draw the card!')
-                can_draw = False
 
         self.schedule.step()
         self.datacollector.collect(self)
