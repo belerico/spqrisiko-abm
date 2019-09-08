@@ -1,6 +1,7 @@
 import os
 import math
 import json
+import pickle
 import networkx as nx
 import random
 import collections, itertools
@@ -71,10 +72,14 @@ class SPQRisiko(Model):
         # Subgraphs
         self.ground_areas = []
         self.sea_areas = []
+
+        path = os.path.abspath((os.path.join(__file__, '..', '..')))
         # Probabilities that the attacker wins on a ground combact
-        self.atta_wins_combact = get_probabilities_ground_combact(50, 50)
+        with open(path + '/matrices/atta_wins_combact.pkl', 'rb') as f:
+            self.atta_wins_combact = pickle.load(f)
         # Probabilities that the attacker wins on a combact by sea
-        self.atta_wins_combact_by_sea = get_probabilities_combact_by_sea(50, 50)
+        with open(path + '/matrices/atta_wins_combact_by_sea.pkl', 'rb') as f:
+            self.atta_wins_combact_by_sea = pickle.load(f)
 
         territories = list(range(45))
         random.shuffle(territories)
@@ -519,7 +524,7 @@ class SPQRisiko(Model):
                 # 6) Attacchi terrestri
                 print('\nGROUND COMBACT!!')
                 
-                attacks = []
+                ground_area_attacks = []
                 attacks = self.get_attackable_ground_areas(player)
                 # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
 
