@@ -642,8 +642,8 @@ class SPQRisiko(Model):
         ground_area_neighbors = self.grid.get_neighbors(ground_area.unique_id)
         for ground_area_neighbor in ground_area_neighbors:
             ground_area_neighbor = self.grid.get_cell_list_contents([ground_area_neighbor])[0]
-            if  isinstance(ground_area_neighbor, GroundArea) and \
-                ground_area_neighbor.owner.unique_id != ground_area.owner.unique_id:
+            if isinstance(ground_area_neighbor, GroundArea) and \
+               ground_area_neighbor.owner.unique_id != ground_area.owner.unique_id:
                 
                 return 2
         
