@@ -107,11 +107,11 @@ def get_probabilities_combact_by_sea(A: int, D: int):
                         .sum(axis=1)\
                         .reshape((1, F_mat.shape[0]))\
                         .tolist()[0]
-    F = pandas.DataFrame(
-            F_mat,
-            columns=absorbing_states,
-            index=pandas.MultiIndex.from_tuples(transient_states)
-        )
+    # F = pandas.DataFrame(
+    #         F_mat,
+    #         columns=absorbing_states,
+    #         index=pandas.MultiIndex.from_tuples(transient_states)
+    #     )
 
     atta_wins = numpy.zeros((A,D))
     idx_probs_atta_wins = 0
@@ -120,7 +120,7 @@ def get_probabilities_combact_by_sea(A: int, D: int):
             atta_wins[a-1, d-1] = probs_atta_wins[idx_probs_atta_wins]
             idx_probs_atta_wins += 1
 
-    return atta_wins, (1 - atta_wins).T, F
+    return atta_wins
 
 def get_probabilities_ground_combact(A: int, D: int):
     
@@ -216,11 +216,11 @@ def get_probabilities_ground_combact(A: int, D: int):
                         .sum(axis=1)\
                         .reshape((1, F_mat.shape[0]))\
                         .tolist()[0]
-    F = pandas.DataFrame(
-            F_mat,
-            columns=absorbing_states,
-            index=pandas.MultiIndex.from_tuples(transient_states)
-        )
+    # F = pandas.DataFrame(
+    #         F_mat,
+    #         columns=absorbing_states,
+    #         index=pandas.MultiIndex.from_tuples(transient_states)
+    #     )
 
     atta_wins = numpy.zeros((A,D))
     idx_probs_atta_wins = 0
@@ -232,11 +232,11 @@ def get_probabilities_ground_combact(A: int, D: int):
                 atta_wins[a-1, d-1] = probs_atta_wins[idx_probs_atta_wins]
                 idx_probs_atta_wins += 1
 
-    return atta_wins, (1 - atta_wins).T, F
+    return atta_wins
 
 
 if __name__ == "__main__":
-    a, _, _ = get_probabilities_combact_by_sea(7,7)
-    b, _, _ = get_probabilities_ground_combact(7,7)
+    a = get_probabilities_combact_by_sea(7,7)
+    b = get_probabilities_ground_combact(7,7)
     print(a)
     print(b)

@@ -72,9 +72,9 @@ class SPQRisiko(Model):
         self.ground_areas = []
         self.sea_areas = []
         # Probabilities that the attacker wins on a ground combact
-        self.atta_wins_combact, _, _ = get_probabilities_ground_combact(10, 10)
+        self.atta_wins_combact = get_probabilities_ground_combact(50, 50)
         # Probabilities that the attacker wins on a combact by sea
-        self.atta_wins_combact_by_sea, _, _ = get_probabilities_combact_by_sea(10, 10)
+        self.atta_wins_combact_by_sea = get_probabilities_combact_by_sea(50, 50)
 
         territories = list(range(45))
         random.shuffle(territories)
@@ -396,18 +396,18 @@ class SPQRisiko(Model):
     def update_atta_wins_combact_matrix(self, attacker_armies, defender_armies, mat_type='combact'):
         if mat_type == 'combact':
             if attacker_armies > self.atta_wins_combact.shape[0] and defender_armies > self.atta_wins_combact.shape[1]:
-                self.atta_wins_combact, _, _ = get_probabilities_ground_combact(attacker_armies, defender_armies)
+                self.atta_wins_combact = get_probabilities_ground_combact(attacker_armies, defender_armies)
             elif attacker_armies > self.atta_wins_combact.shape[0]:
-                self.atta_wins_combact, _, _ = get_probabilities_ground_combact(attacker_armies, self.atta_wins_combact.shape[1])
+                self.atta_wins_combact = get_probabilities_ground_combact(attacker_armies, self.atta_wins_combact.shape[1])
             elif defender_armies > self.atta_wins_combact.shape[1]:
-                self.atta_wins_combact, _, _ = get_probabilities_ground_combact(self.atta_wins_combact.shape[0], defender_armies)
+                self.atta_wins_combact = get_probabilities_ground_combact(self.atta_wins_combact.shape[0], defender_armies)
         elif mat_type == 'combact_by_sea':
             if attacker_armies > self.atta_wins_combact_by_sea.shape[0] and defender_armies > self.atta_wins_combact_by_sea.shape[1]:
-                self.atta_wins_combact_by_sea, _, _ = get_probabilities_combact_by_sea(attacker_armies, defender_armies)
+                self.atta_wins_combact_by_sea = get_probabilities_combact_by_sea(attacker_armies, defender_armies)
             elif attacker_armies > self.atta_wins_combact_by_sea.shape[0]:
-                self.atta_wins_combact_by_sea, _, _ = get_probabilities_combact_by_sea(attacker_armies, self.atta_wins_combact_by_sea.shape[1])
+                self.atta_wins_combact_by_sea = get_probabilities_combact_by_sea(attacker_armies, self.atta_wins_combact_by_sea.shape[1])
             elif defender_armies > self.atta_wins_combact_by_sea.shape[1]:
-                self.atta_wins_combact_by_sea, _, _ = get_probabilities_combact_by_sea(self.atta_wins_combact_by_sea.shape[0], defender_armies)
+                self.atta_wins_combact_by_sea = get_probabilities_combact_by_sea(self.atta_wins_combact_by_sea.shape[0], defender_armies)
 
     def step(self):
         self.current_turn += 1
@@ -489,7 +489,7 @@ class SPQRisiko(Model):
                     ground_area.already_attacked_by_sea = False
 
                 attacks = self.get_attackable_ground_areas_by_sea(player)
-                attacks.sort(key=lambda x: x["prob_win"], reverse=True)
+                # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
 
                 while 0 < len(attacks):
                     attack = attacks[0]
@@ -582,7 +582,7 @@ class SPQRisiko(Model):
         del future_attacks[0]
         while attack_num < len(future_attacks):
             attack = future_attacks[attack_num]
-            if attack['defender'].owner.unique_id == last_attacker.owner.unique_id:
+            if attack['defender'].owner.unique_id == player.unique_id:
                 print('Since the defender has been conquered, I delete it')
                 del future_attacks[attack_num]
             elif attack['defender'].already_attacked_by_sea:
@@ -606,8 +606,10 @@ class SPQRisiko(Model):
                     del future_attacks[attack_num]
             else:
                 attack_num += 1    
-        future_attacks.sort(key=lambda x: x["prob_win"], reverse=True)
-
+        if player.goal == "PP":
+            future_attacks.sort(key=lambda x: (x['defender'].power_place, x['prob_win']), reverse=True)
+        else: 
+            future_attacks.sort(key=lambda x: x['prob_win'], reverse=True)
         return future_attacks
                 
     def get_attackable_ground_areas_by_sea(self, player):
@@ -636,6 +638,10 @@ class SPQRisiko(Model):
                                         "armies_to_leave": armies_to_leave,
                                         "prob_win": prob_win
                                     })
+        if player.goal == "PP":
+            attacks.sort(key=lambda x: (x['defender'].power_place, x['prob_win']), reverse=True)
+        else: 
+            attacks.sort(key=lambda x: x['prob_win'], reverse=True)
         return attacks
 
     def get_armies_to_leave(self, ground_area):

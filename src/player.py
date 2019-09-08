@@ -397,6 +397,7 @@ class Player(Agent):
                                     strongest = ground
                             if strongest:
                                 strongest.armies += armies
+
                     elif self.goal == "BE":
                         """
                         If the player goal is to gain victory points based on having the biggest empire, then:
