@@ -1,5 +1,7 @@
+import os
 import copy
 import numpy
+import pickle
 from pandas import pandas
 
 
@@ -236,7 +238,11 @@ def get_probabilities_ground_combact(A: int, D: int):
 
 
 if __name__ == "__main__":
-    a = get_probabilities_combact_by_sea(7,7)
-    b = get_probabilities_ground_combact(7,7)
-    print(a)
-    print(b)
+    atta_wins_combact_by_sea = get_probabilities_combact_by_sea(50, 50)
+    atta_wins_combact = get_probabilities_ground_combact(50, 50)
+    if not os.path.exists('spqrisiko-abm/matrices'):
+        os.makedirs('spqrisiko-abm/matrices')
+    with open('spqrisiko-abm/matrices/atta_wins_combact_by_sea.pkl', 'wb') as f:
+        pickle.dump(atta_wins_combact_by_sea, f)
+    with open('spqrisiko-abm/matrices/atta_wins_combact.pkl', 'wb') as f:
+        pickle.dump(atta_wins_combact, f)
