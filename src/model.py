@@ -139,12 +139,7 @@ class SPQRisiko(Model):
 
     @staticmethod
     def get_movable_armies_by_strategy(strategy, minimum, maximum):
-        nomads_percentage = {
-            "Passive": 0,
-            "Neutral": 0.4,
-            "Aggressive": 0.8
-        }
-        return round((maximum - minimum) * nomads_percentage[strategy] + minimum)
+        return round((maximum - minimum) * strategies.nomads_percentage[strategy] + minimum)
 
     @staticmethod
     def create_graph_map():
@@ -634,9 +629,9 @@ class SPQRisiko(Model):
                     for sea_area_neighbor in self.grid.get_neighbors(neighbor.unique_id):
                         sea_area_neighbor = self.grid.get_cell_list_contents([sea_area_neighbor])[0]
                         if isinstance(sea_area_neighbor, GroundArea) and \
-                            ground_area.unique_id != sea_area_neighbor.unique_id and \
-                            sea_area_neighbor.owner.unique_id != player.unique_id and \
-                            (sea_area_neighbor.owner.computer or neighbor.trireme[player.unique_id] > neighbor.trireme[sea_area_neighbor.owner.unique_id]):
+                           ground_area.unique_id != sea_area_neighbor.unique_id and \
+                           sea_area_neighbor.owner.unique_id != player.unique_id and \
+                           (sea_area_neighbor.owner.computer or neighbor.trireme[player.unique_id] > neighbor.trireme[sea_area_neighbor.owner.unique_id]):
                             
                             armies_to_leave = self.get_armies_to_leave(ground_area)
                             if ground_area.armies - armies_to_leave >= min(3, sea_area_neighbor.armies):

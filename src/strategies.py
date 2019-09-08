@@ -4,6 +4,12 @@ probs_win = {
     "Aggressive": 0.5
 }
 
+nomads_percentage = {
+    "Passive": 0,
+    "Neutral": 0.4,
+    "Aggressive": 0.8
+}
+
 # "tris": list of reinforcements weights, in order legionaries, triremes and power places
 strategies = {
     "PP": {  # PP = Control as many Power Places as possible
