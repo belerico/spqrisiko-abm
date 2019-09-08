@@ -341,7 +341,7 @@ class Player(Agent):
                 self.put_reinforces(model, value, key)
         # TODO: put by goals
         elif reinforce_type == "triremes":
-            territories = model.get_territories_by_player(self, "sea")
+            territories = model.get_sea_area_near_ground_area(self)
             if len(territories) > 0:
                 if self.goal != "LA":
                     random_territory = model.random.randint(0, len(territories) - 1)
@@ -373,9 +373,7 @@ class Player(Agent):
                         territories[0].trireme[self.unique_id] += armies
                     else:
                         i = 0
-                        print('TRIREME: ', armies)
                         armies_per_territory = math.ceil(armies / len(territories))
-                        print('ARMIES PER TERR: ', armies_per_territory)
                         while armies - armies_per_territory >= 0:
                             territories[i % len(territories)].trireme[self.unique_id] += armies_per_territory
                             armies -= armies_per_territory

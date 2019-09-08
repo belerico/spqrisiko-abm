@@ -400,6 +400,17 @@ class SPQRisiko(Model):
         elif ground_type == "sea":
             return [t for t in self.sea_areas if t.trireme[self.players.index(player)] > 0 or max(t.trireme) == 0]
 
+    def get_sea_area_near_ground_area(self, player):
+        sea_areas = []
+        for sea_area in self.sea_areas:
+            for neighbor in self.grid.get_neighbors(sea_area.unique_id):
+                neighbor = self.grid.get_cell_list_contents([neighbor])[0]
+                if  isinstance(neighbor, GroundArea) and \
+                    neighbor.owner.unique_id == player.unique_id:
+
+                    sea_areas.append(sea_area)
+        return sea_areas
+
     def n_power_places(self):
         n = 0
         for area in self.ground_areas:

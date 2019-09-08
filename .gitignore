@@ -108,3 +108,4 @@ venv.bak/
 .idea
 images/
 paper/
+*.csv
