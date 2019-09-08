@@ -435,7 +435,10 @@ class Player(Agent):
                         #         strongest.armies += armies
                         territories.sort(key=lambda x: x.armies, reverse=False)
                         if self.strategy == "Aggressive":
-                            territories[-1].armies += armies
+                            index = -1
+                            while model.is_not_attackable(territories[index]):
+                                index -= 1
+                            territories[index].armies += armies
                         elif self.strategy == "Neutral":
                             territories[0].armies += armies
                         else:
