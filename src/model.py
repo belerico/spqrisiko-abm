@@ -23,11 +23,19 @@ from mesa.datacollection import DataCollector
 from mesa.space import NetworkGrid
 
 def get_winner(model):
-    winner, points = model.winner()
+    winner, _ = model.winner()
     return winner
 
 def get_winner_turn(model):
     return model.current_turn
+
+def get_player_strategy(model):
+    winner = get_winner(model)
+    return model.players[winner.unique_id].strategy
+
+def get_player_goal(model):
+    winner = get_winner(model)
+    return model.players[winner.unique_id].goal
 
 class SPQRisiko(Model):
     """A SPQRisiko model with some number of players"""
@@ -69,7 +77,9 @@ class SPQRisiko(Model):
         self.grid = NetworkGrid(self.G)
         self.datacollector = DataCollector(model_reporters={
                                               "Winner": get_winner,
-                                              "Turn": get_winner_turn
+                                              "Turn": get_winner_turn,
+                                              "Strategy": get_player_strategy,
+                                              "Goal": get_player_goal
                                             })
         # Schedule
         self.schedule = RandomActivation(self)
@@ -121,7 +131,7 @@ class SPQRisiko(Model):
         for i, node in enumerate(range(45, 57)):
             t = SeaArea(*itemgetter("id", "name", "type", "coords")
                         (self.territories_dict["sea_areas"][i]), model=self)
-            t.trireme = [random.randint(0, 5) for _ in range(self.n_players)]
+            t.trireme = [0 for _ in range(self.n_players)]
             self.grid.place_agent(t, node)
             self.sea_areas.append(self.grid.get_cell_list_contents([node])[0])
 
@@ -767,12 +777,12 @@ class SPQRisiko(Model):
 # n_players, points_limit, strategy, goal
 br_params = {"n_players": [3],
              "points_limit": [50],
-             "strategy": ["Passive"],
+             "strategy": ["Passive", "Neutral", "Aggressive"],
              "goal": ["Random"]}
 
 br = BatchRunner(SPQRisiko,
                  br_params,
-                 iterations=100,
+                 iterations=200,
                  max_steps=1000,
                  model_reporters={"Data Collector": lambda m: m.datacollector})
 
@@ -784,4 +794,4 @@ if __name__ == '__main__':
         if isinstance(br_df["Data Collector"][i], DataCollector):
             i_run_data = br_df["Data Collector"][i].get_model_vars_dataframe()
             br_step_data = br_step_data.append(i_run_data, ignore_index=True)
-    br_step_data.to_csv("BankReservesModel_Step_Data.csv")
+    br_step_data.to_csv("same_strat_diff_goal_50.csv")

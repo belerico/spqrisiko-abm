@@ -347,25 +347,43 @@ class Player(Agent):
                     random_territory = model.random.randint(0, len(territories) - 1)
                     territories[random_territory].trireme[model.players.index(self)] += armies
                 else:  # Put reinforces on sea area with the lowest number of armies
-                    if self.strategy == "Passive" or self.strategy == "Neutral":  # Reinforce weakest territory
-                        weakest = None
-                        for sea in territories:
-                            if not weakest or weakest.trireme[self.unique_id] > sea.trireme[self.unique_id]:
-                                weakest = sea
-                        if weakest:
-                            if self.strategy == "Neutral":
-                                add = round(armies / 2)
-                                armies -= add
-                                weakest.trireme[self.unique_id] += add
-                            else:
-                                weakest.trireme[self.unique_id] += armies
-                    if self.strategy == "Aggressive" or self.strategy == "Neutral":  # Reinforce strongest territory
-                        strongest = None
-                        for sea in territories:
-                            if not strongest or strongest.trireme[self.unique_id] < sea.trireme[self.unique_id]:
-                                strongest = sea
-                        if strongest:
-                            strongest.trireme[self.unique_id] += armies
+                    # if self.strategy == "Passive" or self.strategy == "Neutral":  # Reinforce weakest territory
+                    #     weakest = None
+                    #     for sea in territories:
+                    #         if not weakest or weakest.trireme[self.unique_id] > sea.trireme[self.unique_id]:
+                    #             weakest = sea
+                    #     if weakest:
+                    #         if self.strategy == "Neutral":
+                    #             add = round(armies / 2)
+                    #             armies -= add
+                    #             weakest.trireme[self.unique_id] += add
+                    #         else:
+                    #             weakest.trireme[self.unique_id] += armies
+                    # if self.strategy == "Aggressive" or self.strategy == "Neutral":  # Reinforce strongest territory
+                    #     strongest = None
+                    #     for sea in territories:
+                    #         if not strongest or strongest.trireme[self.unique_id] < sea.trireme[self.unique_id]:
+                    #             strongest = sea
+                    #     if strongest:
+                    #         strongest.trireme[self.unique_id] += armies
+                    territories.sort(key=lambda x: x.trireme[self.unique_id], reverse=False)
+                    if self.strategy == "Aggressive":
+                        territories[-1].trireme[self.unique_id] += armies
+                    elif self.strategy == "Neutral":
+                        territories[0].trireme[self.unique_id] += armies
+                    else:
+                        i = 0
+                        print('TRIREME: ', armies)
+                        armies_per_territory = math.ceil(armies / len(territories))
+                        print('ARMIES PER TERR: ', armies_per_territory)
+                        while armies - armies_per_territory >= 0:
+                            territories[i % len(territories)].trireme[self.unique_id] += armies_per_territory
+                            armies -= armies_per_territory
+                            i += 1
+                        if armies > 0:
+                            territories[i % len(territories)].trireme[self.unique_id] += armies
+                            armies -= armies
+
                 print('Player ' + str(self.unique_id) + ' gets ' + str(armies) + ' triremes')
         else:
             territories = model.get_territories_by_player(self, "ground")
@@ -374,44 +392,62 @@ class Player(Agent):
                     # Play legionaries by strategy
                     if self.goal == "PP":
                         # Reinforce (if existing) the weakest power place territory
-                        pp = model.get_weakest_power_place(self)
-                        if pp:
+                        pp_player = model.get_weakest_power_place(self)
+                        if pp_player:
                             pp_armies = round(max(strategies["PP"]["armies_on_weakest_power_place"] * armies, 1))
                             armies -= pp_armies
-                            pp.armies += pp_armies
+                            pp_player.armies += pp_armies
                         # Reinforce territory near adversary power_place
-                        pp = model.get_weakest_adversary_power_place(self)
-                        if not pp:
-                            idx = model.random.randint(0, len(territories) - 1)
-                            territories[idx].armies += armies
+                        pp_adv = model.get_weakest_adversary_power_place(self)
+                        if not pp_adv:
+                            if pp_player:
+                                pp_player.armies += armies
+                            else:
+                                idx = model.random.randint(0, len(territories) - 1)
+                                territories[idx].armies += armies
                         else:
                             # Find nearest territory to that power place and reinforce it
-                            nearest = model.find_nearest(pp, self)
+                            nearest = model.find_nearest(pp_adv, self)
                             if nearest is not None:
                                 nearest.armies += armies
 
                     elif self.goal == "LA":
-                        if self.strategy == "Passive" or self.strategy == "Neutral":  # Reinforce weakest territory
-                            weakest = None
-                            for ground in territories:
-                                if not weakest or weakest.armies > ground.armies:
-                                    weakest = ground
-                            if weakest:
-                                if self.strategy == "Neutral":
-                                    add = round(armies / 2)
-                                    armies -= add
-                                    weakest.armies += add
-                                else:
-                                    weakest.armies += armies
-                        if self.strategy == "Aggressive" or self.strategy == "Neutral":  # Reinforce strongest territory
-                            strongest = None
-                            strong = 0
-                            for ground in territories:
-                                if not strongest or strong < ground.armies:
-                                    strong = ground.armies
-                                    strongest = ground
-                            if strongest:
-                                strongest.armies += armies
+                        # if self.strategy == "Passive" or self.strategy == "Neutral":  # Reinforce weakest territory
+                        #     weakest = None
+                        #     for ground in territories:
+                        #         if not weakest or weakest.armies > ground.armies:
+                        #             weakest = ground
+                        #     if weakest:
+                        #         if self.strategy == "Neutral":
+                        #             add = round(armies / 2)
+                        #             armies -= add
+                        #             weakest.armies += add
+                        #         else:
+                        #             weakest.armies += armies
+                        # if self.strategy == "Aggressive" or self.strategy == "Neutral":  # Reinforce strongest territory
+                        #     strongest = None
+                        #     strong = 0
+                        #     for ground in territories:
+                        #         if not strongest or strong < ground.armies:
+                        #             strong = ground.armies
+                        #             strongest = ground
+                        #     if strongest:
+                        #         strongest.armies += armies
+                        territories.sort(key=lambda x: x.armies, reverse=False)
+                        if self.strategy == "Aggressive":
+                            territories[-1].armies += armies
+                        elif self.strategy == "Neutral":
+                            territories[0].armies += armies
+                        else:
+                            i = 0
+                            armies_per_territory = math.ceil(armies / len(territories))
+                            while armies - armies_per_territory >= 0:
+                                territories[i % len(territories)].armies += armies_per_territory
+                                armies -= armies_per_territory
+                                i += 1
+                            if armies > 0:
+                                territories[i % len(territories)].armies += armies
+                                armies -= armies 
 
                     elif self.goal == "BE":
                         """
@@ -435,7 +471,7 @@ class Player(Agent):
                             border.sort(key=lambda x: x.armies, reverse=False)
                             if self.strategy == "Aggressive":
                                 border[-1].armies += armies
-                            elif self.strategy == "Passive":
+                            elif self.strategy == "Neutral":
                                 border[0].armies += armies
                             else:
                                 i = 0
@@ -453,21 +489,21 @@ class Player(Agent):
                     # at max 12 power places
                     if model.n_power_places() >= 12:
                         return
-                    # if self.goal != "PP":
-                    #     idx = model.random.randint(0, len(territories) - 1)
-                    #     territories[idx].power_place = True
-                    # else:
-                    non_attackables = model.non_attackable_areas(self)
-                    if len(non_attackables) > 0:
-                        idx = 0  # Put power place in the first non attackable ground area
-                        non_attackables[idx].power_place = True
+                    if self.goal != "PP":
+                        idx = model.random.randint(0, len(territories) - 1)
+                        territories[idx].power_place = True
                     else:
-                        highest_armies_territory = None
-                        high = 0
-                        for terr in territories:
-                            if terr.armies > high or (highest_armies_territory and highest_armies_territory.power_place == False):
-                                high = terr.armies
-                                highest_armies_territory = terr
-                        if highest_armies_territory:
-                            highest_armies_territory.power_place = True
+                        non_attackables = model.non_attackable_areas(self)
+                        if len(non_attackables) > 0:
+                            idx = 0  # Put power place in the first non attackable ground area
+                            non_attackables[idx].power_place = True
+                        else:
+                            highest_armies_territory = None
+                            high = 0
+                            for terr in territories:
+                                if terr.armies > high or (highest_armies_territory and highest_armies_territory.power_place == False):
+                                    high = terr.armies
+                                    highest_armies_territory = terr
+                            if highest_armies_territory:
+                                highest_armies_territory.power_place = True
                     print('Player ' + str(self.unique_id) + ' gets a power place')
