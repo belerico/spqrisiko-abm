@@ -808,7 +808,7 @@ class SPQRisiko(Model):
 # parameter lists for each parameter to be tested in batch run
 # n_players, points_limit, strategy, goal
 br_params = {"n_players": [3],
-             "points_limit": [100],
+             "points_limit": [150],
              "strategy": ["Random"],
              "goal": ["PP", "BE", "LA"]}
 
@@ -826,4 +826,4 @@ if __name__ == '__main__':
         if isinstance(br_df["Data Collector"][i], DataCollector):
             i_run_data = br_df["Data Collector"][i].get_model_vars_dataframe()
             br_step_data = br_step_data.append(i_run_data, ignore_index=True)
-    br_step_data.to_csv("diff_strat_same_goal_100.csv")
+    br_step_data.to_csv("diff_strat_same_goal_150.csv")
