@@ -89,7 +89,7 @@ model_params = {
     'points_limit': UserSettableParameter('slider', 'Points limit', 50, 50, 500, 5,
                                        description='How many points should a player reach to win the war?'),
     'strategy': UserSettableParameter('choice', "Which strategy should players play?",
-                                          value="Random", choices=["Aggressive", "Defensive", "Neutral", "Random"]),
+                                          value="Random", choices=["Aggressive", "Passive", "Neutral", "Random"]),
     'goal': UserSettableParameter('choice', "Which goal should players follow?",
                                           value="Random", choices=["Random", "PP", "BE", "LA"])
 }

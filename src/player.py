@@ -119,6 +119,14 @@ class Player(Agent):
         aggressivity,
         atta_wins):
 
+        row = attacker_trireme
+        col = sea_area.trireme[adv]
+        m = max(row, col)
+        ratio = 100 / m
+        if ratio < 1:
+            row = min(round(ratio * row), 100)
+            col = min(round(ratio * col), 100)
+
         while min(3, attacker_trireme) >= min(3, sea_area.trireme[adv]) and \
                 atta_wins[attacker_trireme - 1, sea_area.trireme[adv] - 1] >= aggressivity and \
                 attacker_trireme > 0 and \
@@ -141,6 +149,14 @@ class Player(Agent):
                     sea_area.trireme[self.unique_id] -= 1
                     attacker_trireme -= 1
                     print('Attacker lose one army')
+            
+            row = attacker_trireme
+            col = sea_area.trireme[adv]
+            m = max(row, col)
+            ratio = 100 / m
+            if ratio < 1:
+                row = min(round(ratio * row), 100)
+                col = min(round(ratio * col), 100)
 
         if sea_area.trireme[adv] <= 0:
             print('Defender has lost all of its trireme!')
@@ -198,8 +214,16 @@ class Player(Agent):
 
         conquered = False
 
+        row = attacker_armies
+        col = ground_area_to.armies
+        m = max(row, col)
+        ratio = 100 / m
+        if ratio < 1:
+            row = min(round(ratio * row), 100)
+            col = min(round(ratio * col), 100)
+
         while min(3, attacker_armies) >= min(3, ground_area_to.armies) and \
-                atta_wins[attacker_armies - 1, ground_area_to.armies - 1] >= aggressivity and \
+                atta_wins[row - 1, col - 1] >= aggressivity and \
                 attacker_armies > 0 and \
                 ground_area_to.armies > 0:
             
@@ -220,6 +244,14 @@ class Player(Agent):
                     ground_area_from.armies -= 1
                     attacker_armies -= 1
                     print('Attacker lose one army')
+            
+            row = attacker_armies
+            col = ground_area_to.armies
+            m = max(row, col)
+            ratio = 100 / m
+            if ratio < 1:
+                row = min(round(ratio * row), 100)
+                col = min(round(ratio * col), 100)
 
         if ground_area_to.armies <= 0:
             print('Defender has lost the area!')
@@ -373,7 +405,7 @@ class Player(Agent):
                         territories[0].trireme[self.unique_id] += armies
                     else:
                         i = 0
-                        armies_per_territory = math.ceil(armies / len(territories))
+                        armies_per_territory = max(math.floor(armies / len(territories)), 1)
                         while armies - armies_per_territory >= 0:
                             territories[i % len(territories)].trireme[self.unique_id] += armies_per_territory
                             armies -= armies_per_territory
@@ -441,7 +473,7 @@ class Player(Agent):
                             territories[0].armies += armies
                         else:
                             i = 0
-                            armies_per_territory = math.ceil(armies / len(territories))
+                            armies_per_territory = max(math.floor(armies / len(territories)), 1)
                             while armies - armies_per_territory >= 0:
                                 territories[i % len(territories)].armies += armies_per_territory
                                 armies -= armies_per_territory
@@ -465,7 +497,7 @@ class Player(Agent):
                         for ground_area in max_empire:
                             for neighbor in model.grid.get_neighbors(ground_area.unique_id):
                                 neighbor = model.grid.get_cell_list_contents([neighbor])[0]
-                                if isinstance(neighbor, GroundArea) and neighbor.owner.unique_id != self.unique_id:
+                                if  isinstance(neighbor, GroundArea) and neighbor.owner.unique_id != self.unique_id:
                                     border.append(ground_area)
                                     break
                         if border != []:
@@ -476,7 +508,7 @@ class Player(Agent):
                                 border[0].armies += armies
                             else:
                                 i = 0
-                                armies_per_territory = math.ceil(armies / len(border))
+                                armies_per_territory = max(math.floor(armies / len(border)), 1)
                                 while armies - armies_per_territory >= 0:
                                     border[i % len(border)].armies += armies_per_territory
                                     armies -= armies_per_territory

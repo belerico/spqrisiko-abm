@@ -59,7 +59,7 @@ class SPQRisiko(Model):
         else:
             goals = [goal for i in range(self.n_players)]
 
-        self.players = [Player(i, computer=False, strategy=self.get_strategy_setup(strategy),
+        self.players = [Player(i, computer=False, strategy=self.get_strategy_setup(strategy, i),
                                goal=goals[i], model=self)
                         for i in range(self.n_players)]
         for player in self.players:
@@ -141,10 +141,10 @@ class SPQRisiko(Model):
         self.running = True
         # self.datacollector.collect(self)
 
-    def get_strategy_setup(self, strategy):
+    def get_strategy_setup(self, strategy, i):
         strats = ["Aggressive", "Passive", "Neutral"]
         if strategy == "Random":
-            strategy = self.random.choice(strats)
+            strategy = strats[i]
         return strategy
 
     @staticmethod
@@ -489,9 +489,16 @@ class SPQRisiko(Model):
                     if min_trireme > 0:
                         adv_min_trireme = sea_area.trireme.index(min_trireme)
                         # Check if the atta_wins_combact probabilities matrix needs to be recomputed 
-                        self.update_atta_wins_combact_matrix(sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme])
+                        # self.update_atta_wins_combact_matrix(sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme])
+                        row = sea_area.trireme[player.unique_id]
+                        col = sea_area.trireme[adv_min_trireme]
+                        m = max(row, col)
+                        ratio = 100 / m
+                        if ratio < 1:
+                            row = min(round(ratio * row), 100)
+                            col = min(round(ratio * col), 100)
                         if  player.unique_id != adv_min_trireme and \
-                            self.atta_wins_combact[sea_area.trireme[player.unique_id], sea_area.trireme[adv_min_trireme]] >= strategies.probs_win[player.strategy]:
+                            self.atta_wins_combact[row - 1, col - 1] >= strategies.probs_win[player.strategy]:
                             
                             attackable_sea_areas.append([sea_area, adv_min_trireme])
 
@@ -657,8 +664,15 @@ class SPQRisiko(Model):
                             
                             armies_to_leave = self.get_armies_to_leave(ground_area)
                             if ground_area.armies - armies_to_leave >= min(3, sea_area_neighbor.armies):
-                                self.update_atta_wins_combact_matrix(ground_area.armies - armies_to_leave, sea_area_neighbor.armies, mat_type='combact_by_sea')
-                                prob_win = self.atta_wins_combact_by_sea[ground_area.armies - armies_to_leave - 1, sea_area_neighbor.armies - 1]
+                                # self.update_atta_wins_combact_matrix(ground_area.armies - armies_to_leave, sea_area_neighbor.armies, mat_type='combact_by_sea')
+                                row = ground_area.armies - armies_to_leave
+                                col = sea_area_neighbor.armies
+                                m = max(row, col)
+                                ratio = 100 / m
+                                if ratio < 1:
+                                    row = min(round(ratio * row), 100)
+                                    col = min(round(ratio * col), 100)
+                                prob_win = self.atta_wins_combact_by_sea[row - 1, col - 1]
                                 if prob_win >= strategies.probs_win[player.strategy]:
                                     attacks.append({
                                         "defender": sea_area_neighbor,
@@ -692,8 +706,15 @@ class SPQRisiko(Model):
                     neighbor.owner.unique_id != ground_area.owner.unique_id and \
                     ground_area.armies - 1 >= min(3, neighbor.armies):
                     
-                    self.update_atta_wins_combact_matrix(ground_area.armies - 1, neighbor.armies)
-                    prob_win = self.atta_wins_combact[ground_area.armies - 2, neighbor.armies - 1]
+                    # self.update_atta_wins_combact_matrix(ground_area.armies - 1, neighbor.armies)
+                    row = ground_area.armies - 1
+                    col = neighbor.armies
+                    m = max(row, col)
+                    ratio = 100 / m
+                    if ratio < 1:
+                        row = min(round(ratio * row), 100)
+                        col = min(round(ratio * col), 100)
+                    prob_win = self.atta_wins_combact[row - 1, col - 1]
                     if prob_win >= strategies.probs_win[ground_area.owner.strategy]:
                         attacks.append({
                             "defender": neighbor,
@@ -787,7 +808,7 @@ class SPQRisiko(Model):
 # parameter lists for each parameter to be tested in batch run
 # n_players, points_limit, strategy, goal
 br_params = {"n_players": [3],
-             "points_limit": [50],
+             "points_limit": [150],
              "strategy": ["Passive", "Neutral", "Aggressive"],
              "goal": ["Random"]}
 
@@ -805,4 +826,4 @@ if __name__ == '__main__':
         if isinstance(br_df["Data Collector"][i], DataCollector):
             i_run_data = br_df["Data Collector"][i].get_model_vars_dataframe()
             br_step_data = br_step_data.append(i_run_data, ignore_index=True)
-    br_step_data.to_csv("same_strat_diff_goal_50.csv")
+    br_step_data.to_csv("same_strat_diff_goal_100.csv")
