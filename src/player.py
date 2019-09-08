@@ -341,14 +341,25 @@ class Player(Agent):
                     random_territory = model.random.randint(0, len(territories) - 1)
                     territories[random_territory].trireme[model.players.index(self)] += armies
                 else:  # Put reinforces on sea area with the lowest number of armies
-                    lowest_territory = None
-                    low = 0
-                    for sea in territories:
-                        if not lowest_territory or low > sea.trireme[model.players.index(self)]:
-                            low = sea.trireme[model.players.index(self)]
-                            lowest_territory = sea
-                    if lowest_territory:
-                        lowest_territory.trireme[model.players.index(self)] += armies
+                    if self.strategy == "Passive" or self.strategy == "Neutral":  # Reinforce weakest territory
+                        weakest = None
+                        for sea in territories:
+                            if not weakest or weakest.trireme[self.unique_id] > sea.trireme[self.unique_id]:
+                                weakest = sea
+                        if weakest:
+                            if self.strategy == "Neutral":
+                                add = round(armies / 2)
+                                armies -= add
+                                weakest.trireme[self.unique_id] += add
+                            else:
+                                weakest.trireme[self.unique_id] += armies
+                    if self.strategy == "Aggressive" or self.strategy == "Neutral":  # Reinforce strongest territory
+                        strongest = None
+                        for sea in territories:
+                            if not strongest or strongest.trireme[self.unique_id] < sea.trireme[self.unique_id]:
+                                strongest = sea
+                        if strongest:
+                            strongest.trireme[self.unique_id] += armies
                 print('Player ' + str(self.unique_id) + ' gets ' + str(armies) + ' triremes')
         else:
             territories = model.get_territories_by_player(self, "ground")
@@ -375,19 +386,17 @@ class Player(Agent):
 
                     elif self.goal == "LA":
                         if self.strategy == "Passive" or self.strategy == "Neutral":  # Reinforce weakest territory
-                            lowest_territory = None
-                            low = 0
+                            weakest = None
                             for ground in territories:
-                                if not lowest_territory or low > ground.armies:
-                                    low = ground.armies
-                                    lowest_territory = ground
-                            if lowest_territory:
+                                if not weakest or weakest.armies > ground.armies:
+                                    weakest = ground
+                            if weakest:
                                 if self.strategy == "Neutral":
                                     add = round(armies / 2)
                                     armies -= add
-                                    lowest_territory.armies += add
+                                    weakest.armies += add
                                 else:
-                                    lowest_territory.armies += armies
+                                    weakest.armies += armies
                         if self.strategy == "Aggressive" or self.strategy == "Neutral":  # Reinforce strongest territory
                             strongest = None
                             strong = 0
