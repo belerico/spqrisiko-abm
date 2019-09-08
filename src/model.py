@@ -524,7 +524,7 @@ class SPQRisiko(Model):
                 # 6) Attacchi terrestri
                 print('\nGROUND COMBACT!!')
                 
-                ground_area_attacks = []
+                attacks = []
                 attacks = self.get_attackable_ground_areas(player)
                 # attacks.sort(key=lambda x: x["prob_win"], reverse=True)
 
